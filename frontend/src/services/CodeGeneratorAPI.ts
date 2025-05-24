@@ -182,7 +182,7 @@ class CodeGeneratorAPI {
    */
   async generateEnhancedProject(projectId: string, provider = 'openai', maxIterations = 10) {
     try {
-      const response = await fetch(`${this.baseUrl}/generate-enhanced`, {
+      const response = await fetch(`${this.baseUrl}/generate-enhanced-v2`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

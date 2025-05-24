@@ -370,55 +370,6 @@ async def get_agent_info():
         "recommended_provider": "anthropic"
     }
 
-# NUOVO: Metodo enhanced per la generazione completa
-@app.post("/generate-enhanced")
-async def generate_enhanced_code(request: EnhancedGenerateRequest):
-    """Generate complete project with automatic merging"""
-    try:
-        # Verify project exists
-        project_path = Path(f"output/{request.project_id}")
-        if not project_path.exists():
-            raise HTTPException(status_code=404, detail="Project not found")
-        
-        # Load project and requirements
-        with open(project_path / "project.json", 'r') as f:
-            project_data = json.load(f)
-        
-        requirements = project_data.get('requirements', {})
-        
-        logger.info(f"Starting enhanced generation for {request.project_id}")
-        
-        # Usa l'enhanced generator
-        result = await enhanced_generator.generate_complete_project(
-            project_id=request.project_id,
-            requirements=requirements,
-            provider=request.llm_provider,
-            max_iterations=request.max_iterations
-        )
-        
-        # Update project status
-        project_data['status'] = 'completed'
-        project_data['iterations_completed'] = result['iterations_made']
-        project_data['final_path'] = str(result['final_path'])
-        project_data['file_count'] = len(result['final_files'])
-        
-        with open(project_path / "project.json", 'w') as f:
-            json.dump(project_data, f, indent=2, cls=DateTimeEncoder)
-        
-        return {
-            "project_id": request.project_id,
-            "status": "completed",
-            "iterations_completed": len(result['iterations_made']),
-            "final_path": str(result['final_path']),
-            "file_count": len(result['final_files']),
-            "download_url": f"/project/{request.project_id}/download-final",
-            "message": f"Project generated with {len(result['iterations_made'])} iterations"
-        }
-        
-    except Exception as e:
-        logger.error(f"Enhanced generate error: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/project/{project_id}/status")
 async def get_project_status(project_id: str):
