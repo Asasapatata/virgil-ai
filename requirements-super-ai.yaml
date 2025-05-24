@@ -1,0 +1,155 @@
+project:
+  name: Super AI Landing Page
+  type: frontend
+  description: Landing page moderna per Super AI - consulenza software tramite AI
+
+stack:
+  - React
+  - Next.js
+  - TypeScript
+  - Tailwind CSS
+  - Framer Motion (per animazioni)
+
+pages:
+  - name: Home (Landing Page)
+    path: /
+    sections:
+      - Hero Section
+      - Services Overview
+      - Features Highlight
+      - CTA Section
+    
+  - name: About
+    path: /about
+    sections:
+      - Story Section
+      - Founder Profile
+      - Mission & Vision
+    
+  - name: Contact
+    path: /contact
+    sections:
+      - Contact Form
+      - Contact Information
+      - Location/Office
+
+design:
+  theme: Modern, Professional, Tech-focused
+  colors:
+    primary: "#3B82F6"  # Blue
+    secondary: "#1E40AF"  # Dark Blue
+    accent: "#F59E0B"  # Amber
+    background: "#FFFFFF"
+    text: "#1F2937"
+  fonts:
+    heading: "Inter"
+    body: "Inter"
+  style: Clean, minimalist, modern SaaS design
+
+content:
+  company:
+    name: Super AI
+    tagline: "Trasformiamo le tue idee in software aziendale con l'intelligenza artificiale"
+    description: "Super AI è un'azienda di consulenza specializzata nella generazione di software aziendali su misura utilizzando strumenti di intelligenza artificiale avanzati."
+  
+  services:
+    - name: "Sviluppo Rapido"
+      description: "Riduciamo i tempi di sviluppo del 70% grazie all'automazione AI"
+      icon: "rocket"
+    
+    - name: "Automazione del Codice"
+      description: "Generazione automatica di codice pulito e scalabile"
+      icon: "code"
+    
+    - name: "Test Automatici"
+      description: "Testing completo e automatizzato per garantire qualità"
+      icon: "shield-check"
+
+  features:
+    - title: "Rapidità di Sviluppo"
+      description: "Dai requisiti al software funzionante in settimane, non mesi"
+      benefits:
+        - "Time-to-market ridotto del 70%"
+        - "Prototipazione rapida"
+        - "Deploy automatico"
+    
+    - title: "Automazione nella Scrittura del Codice"
+      description: "AI avanzata per generare codice enterprise-grade"
+      benefits:
+        - "Codice sempre aggiornato alle best practices"
+        - "Architetture scalabili"
+        - "Zero technical debt"
+    
+    - title: "Test Automatici"
+      description: "Testing completo e automatizzato per zero bug in produzione"
+      benefits:
+        - "Unit tests automatici"
+        - "Integration testing"
+        - "End-to-end validation"
+
+  about:
+    story: |
+      Super AI nasce dal genio ribelle di Andrea Pascali, un visionario che ha 
+      trasformato la frustrazione per i lunghi tempi di sviluppo software in 
+      un'opportunità rivoluzionaria.
+      
+      Dopo anni passati a vedere progetti aziendali fallire per complessità 
+      e tempi infiniti, Andrea ha deciso di ribaltare il paradigma: perché 
+      non far scrivere il codice direttamente all'intelligenza artificiale?
+      
+      Così è nata Super AI, dove l'automazione incontra l'eccellenza, e dove 
+      ogni progetto è un passo verso il futuro del software development.
+    
+    founder:
+      name: "Andrea Pascali"
+      title: "Founder & CEO"
+      bio: "Ingegnere del software con la passione per l'innovazione e l'automazione. Dopo aver lavorato per anni nell'enterprise software, ha fondato Super AI per rivoluzionare il modo in cui il software viene creato."
+      image: "/images/andrea-pascali.jpg"
+    
+    mission: "Rendere lo sviluppo software accessibile, veloce e di qualità enterprise per ogni azienda"
+    vision: "Un mondo dove le idee diventano software funzionante in tempo record"
+
+  contact:
+    email: "info@superai.it"
+    phone: "+39 02 1234 5678"
+    address: "Via Innovazione 42, 20121 Milano, Italia"
+    office_hours: "Lun-Ven: 9:00-18:00"
+    
+  cta:
+    primary: "Inizia il tuo progetto"
+    secondary: "Richiedi una demo gratuita"
+    description: "Trasforma la tua idea in un software aziendale in sole 2-4 settimane"
+
+features:
+  - Responsive design (mobile-first)
+  - SEO optimized
+  - Performance optimized (Lighthouse score 90+)
+  - Smooth animations with Framer Motion
+  - Contact form with validation
+  - Modern glassmorphism UI elements
+  - Dark/Light mode toggle
+  - Social media integration
+  - Analytics integration ready
+  - GDPR compliant cookie banner
+
+technical_requirements:
+  - Clean, semantic HTML
+  - TypeScript strict mode
+  - ESLint + Prettier configured
+  - Tailwind CSS for styling
+  - Next.js Image optimization
+  - Meta tags for SEO
+  - Sitemap generation
+  - robots.txt
+  - Performance monitoring setup
+  - Accessibility (WCAG 2.1 AA compliant)
+
+deployment:
+  target: Vercel
+  domain: superai.it
+  environment: production
+  performance:
+    - Core Web Vitals optimization
+    - Image optimization
+    - Code splitting
+    - Lazy loading

@@ -1,0 +1,262 @@
+## 7. requirements.example.yaml
+project:
+  name: "My React Auth App"
+  type: "fullstack"
+  description: "React app with JWT authentication and user management"
+  
+features:
+  - authentication:
+      type: "jwt"
+      providers: ["email", "google"]
+      features:
+        - login
+        - register
+        - logout
+        - password_reset
+        - email_verification
+  
+  - database:
+      type: "postgresql"
+      models:
+        - User:
+            fields:
+              - id: { type: "uuid", primary_key: true }
+              - email: { type: "string", unique: true, required: true }
+              - password: { type: "string", required: true }
+              - first_name: { type: "string" }
+              - last_name: { type: "string" }
+              - is_active: { type: "boolean", default: true }
+              - is_verified: { type: "boolean", default: false }
+              - created_at: { type: "timestamp", auto_now_add: true }
+              - updated_at: { type: "timestamp", auto_now: true }
+        
+        - Session:
+            fields:
+              - id: { type: "uuid", primary_key: true }
+              - user_id: { type: "uuid", foreign_key: "User" }
+              - token: { type: "string", unique: true }
+              - expires_at: { type: "timestamp" }
+              - created_at: { type: "timestamp", auto_now_add: true }
+  
+frontend:
+  framework: "next"
+  typescript: true
+  ui_library: "material-ui"
+  styling: "emotion"
+  
+  pages:
+    - name: "Home"
+      route: "/"
+      protected: false
+      description: "Landing page with app introduction"
+    
+    - name: "Login"
+      route: "/login"
+      protected: false
+      components:
+        - LoginForm
+        - SocialLogin
+    
+    - name: "Register"
+      route: "/register"
+      protected: false
+      components:
+        - RegisterForm
+        - TermsAcceptance
+    
+    - name: "Dashboard"
+      route: "/dashboard"
+      protected: true
+      components:
+        - UserStats
+        - RecentActivity
+    
+    - name: "Profile"
+      route: "/profile"
+      protected: true
+      components:
+        - ProfileForm
+        - PasswordChange
+        - AccountSettings
+    
+    - name: "ForgotPassword"
+      route: "/forgot-password"
+      protected: false
+    
+    - name: "ResetPassword"
+      route: "/reset-password"
+      protected: false
+      
+  components:
+    - Layout:
+        description: "Main layout wrapper with navigation"
+        features:
+          - responsive_navbar
+          - user_menu
+          - footer
+    
+    - PrivateRoute:
+        description: "HOC for protected routes"
+        features:
+          - auth_check
+          - redirect_to_login
+    
+    - LoadingSpinner:
+        description: "Reusable loading indicator"
+    
+    - ErrorBoundary:
+        description: "Error handling component"
+
+backend:
+  framework: "fastapi"
+  python_version: "3.10"
+  
+  api_structure:
+    - auth:
+        endpoints:
+          - path: "/api/auth/register"
+            method: "POST"
+            description: "User registration"
+            request_body:
+              - email: string
+              - password: string
+              - first_name: string
+              - last_name: string
+          
+          - path: "/api/auth/login"
+            method: "POST"
+            description: "User login"
+            request_body:
+              - email: string
+              - password: string
+            response:
+              - access_token: string
+              - refresh_token: string
+              - user: object
+          
+          - path: "/api/auth/logout"
+            method: "POST"
+            protected: true
+          
+          - path: "/api/auth/refresh"
+            method: "POST"
+            request_body:
+              - refresh_token: string
+          
+          - path: "/api/auth/forgot-password"
+            method: "POST"
+            request_body:
+              - email: string
+          
+          - path: "/api/auth/reset-password"
+            method: "POST"
+            request_body:
+              - token: string
+              - new_password: string
+          
+          - path: "/api/auth/verify-email"
+            method: "GET"
+            query_params:
+              - token: string
+    
+    - users:
+        endpoints:
+          - path: "/api/users/profile"
+            method: "GET"
+            protected: true
+            description: "Get current user profile"
+          
+          - path: "/api/users/profile"
+            method: "PUT"
+            protected: true
+            description: "Update user profile"
+            request_body:
+              - first_name: string
+              - last_name: string
+          
+          - path: "/api/users/change-password"
+            method: "POST"
+            protected: true
+            request_body:
+              - current_password: string
+              - new_password: string
+  
+  middleware:
+    - cors:
+        allow_origins: ["http://localhost:3000"]
+        allow_methods: ["*"]
+        allow_headers: ["*"]
+    
+    - rate_limiting:
+        default_limit: "100/minute"
+        auth_endpoints: "5/minute"
+    
+    - error_handling:
+        log_errors: true
+        return_stack_traces: false
+  
+  services:
+    - EmailService:
+        provider: "sendgrid"  # or "smtp"
+        templates:
+          - welcome_email
+          - password_reset
+          - email_verification
+    
+    - SecurityService:
+        features:
+          - password_hashing
+          - jwt_generation
+          - token_validation
+    
+    - UserService:
+        features:
+          - user_creation
+          - profile_management
+          - authentication
+
+testing:
+  coverage_threshold: 80
+  
+  frontend:
+    unit_tests:
+      - components
+      - hooks
+      - utils
+    integration_tests:
+      - api_calls
+      - auth_flow
+    e2e_tests:
+      - user_registration
+      - login_logout
+      - profile_update
+  
+  backend:
+    unit_tests:
+      - services
+      - utils
+      - models
+    integration_tests:
+      - api_endpoints
+      - database_operations
+      - auth_middleware
+    
+deployment:
+  docker: true
+  environment_variables:
+    - DATABASE_URL
+    - SECRET_KEY
+    - JWT_SECRET_KEY
+    - EMAIL_API_KEY
+    - FRONTEND_URL
+  
+  health_checks:
+    - database_connection
+    - redis_connection
+    - external_services
+
+documentation:
+  api_docs: true  # Auto-generated with FastAPI
+  readme: true
+  setup_guide: true
+  architecture_diagram: true

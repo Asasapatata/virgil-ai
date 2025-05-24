@@ -1,0 +1,100 @@
+# version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: codegenuser
+      POSTGRES_PASSWORD: codegenpass
+      POSTGRES_DB: codegendb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ai-codegen-network
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - ai-codegen-network
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://codegenuser:codegenpass@postgres:5432/codegendb
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./backend:/app
+      - ./output:/app/output
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - ai-codegen-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    # volumes:
+      # - ./frontend:/app
+      # - /app/node_modules
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    networks:
+      - ai-codegen-network
+
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.tasks.celery_app:celery worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://codegenuser:codegenpass@postgres:5432/codegendb
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./backend:/app
+      - ./output:/app/output
+      - /var/run/docker.sock:/var/run/docker.sock
+      - node_modules:/app/output/node_modules
+      - venv:/app/output/venv
+    extra_hosts:
+      - "host.docker.internal:host-gateway" 
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - ai-codegen-network
+
+  # deepseek-runpod:
+  #   image: deepseek-deployment:latest
+  #   build:
+  #     context: ./deepseek-runpod
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - RUNPOD_API_KEY=${RUNPOD_API_KEY}
+  #   networks:
+  #     - ai-codegen-network
+
+volumes:
+  postgres_data:
+  node_modules:   # volume per node_modules condivisi
+  venv:           # volume per ambienti virtuali Python condivisi
+
+networks:
+  ai-codegen-network:
+    driver: bridge

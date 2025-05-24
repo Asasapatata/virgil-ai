@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# Testing
+coverage/
+.coverage
+.pytest_cache/
+
+# Output files
+output/
+!output/.gitkeep
+
+# Temporary files
+tmp/
+temp/
+*.tmp

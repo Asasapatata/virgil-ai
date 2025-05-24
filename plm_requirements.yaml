@@ -1,0 +1,125 @@
+project_name: NovaPLM
+description: NovaPLM è una piattaforma web per la gestione del ciclo di vita del prodotto,
+  pensata per aziende manifatturiere. Permette di gestire prodotti, documentazione
+  tecnica, revisioni, workflow approvativi e comunicazione tra team.
+tech_stack:
+  frontend: React
+  backend: Node.js (Express)
+  database: PostgreSQL
+  auth: JWT + bcrypt
+  api: RESTful
+  deployment: Docker + Docker Compose
+features:
+- name: Home Page
+  description: Pagina informativa pubblica con descrizione delle funzionalità del
+    PLM, vantaggi, e CTA per login/registrazione.
+  components:
+  - Hero section
+  - Features overview
+  - Testimonials
+  - Call to action (login/registrati)
+- name: Login
+  description: Form per l’autenticazione degli utenti con email e password.
+  components:
+  - Email input
+  - Password input
+  - Forgot password link
+  logic:
+  - Autenticazione con JWT
+  - Validazione form
+  - Messaggi di errore
+- name: Registrazione
+  description: Form per la creazione di un nuovo account.
+  components:
+  - Nome completo
+  - Email
+  - Password e conferma password
+  - Ruolo (es. progettista, revisore, admin)
+  logic:
+  - Validazione lato frontend
+  - Salvataggio sicuro password (bcrypt)
+  - Invio email di conferma (mock per MVP)
+- name: Dashboard
+  access: autenticato
+  description: Interfaccia principale per utenti autenticati con overview dei progetti,
+    notifiche e accesso rapido alle funzionalità.
+  widgets:
+  - Lista progetti recenti
+  - Avvisi/revisioni pendenti
+  - Shortcut a creazione progetto/documento
+- name: Gestione Progetti
+  access: autenticato
+  description: Creazione, visualizzazione e modifica di progetti.
+  fields:
+  - Nome progetto
+  - Codice identificativo
+  - Stato (attivo, sospeso, completato)
+  - Owner e membri del team
+  - Descrizione
+- name: Gestione Documentazione
+  access: autenticato
+  description: Upload e versionamento di documenti tecnici associati a un progetto.
+  features:
+  - Upload file
+  - Version control (v1, v2, ...)
+  - Preview PDF/immagini
+  - Download storico
+- name: Workflow approvativo
+  access: autenticato
+  description: Sistema per inviare un documento o progetto in revisione, con approvazione
+    da parte dei membri senior.
+  states:
+  - In attesa
+  - Approvato
+  - Respinto
+  actions:
+  - Commenti di revisione
+  - Notifiche
+security:
+- Protezione delle rotte backend con JWT
+- CORS abilitato solo per frontend origin
+- Rate limiting per le API pubbliche
+- Criptazione delle password con bcrypt
+- Validazione input lato server
+database_schema:
+  tables:
+    users:
+    - id
+    - name
+    - email
+    - password_hash
+    - role
+    - created_at
+    projects:
+    - id
+    - name
+    - code
+    - status
+    - owner_id
+    - description
+    - created_at
+    project_members:
+    - user_id
+    - project_id
+    - role
+    documents:
+    - id
+    - project_id
+    - file_path
+    - version
+    - uploaded_by
+    - created_at
+    reviews:
+    - id
+    - document_id
+    - reviewer_id
+    - status
+    - comments
+    - reviewed_at
+deployment:
+  Dockerfile per frontend e backend: null
+  docker-compose.yml con servizi:
+  - frontend
+  - backend
+  - db (Postgres)
+  Volumi persistenti: per database e documenti caricati

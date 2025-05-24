@@ -1,0 +1,324 @@
+project:
+  name: "Virgil AI Landing Page"
+  type: "static-landing-page"  # Changed from "frontend" to be more specific
+  description: "Landing page futuristica per Virgil AI, che presenta la sua tecnologia di generazione automatica di codice, test e iterazione"
+  structure: "frontend-only"   # Explicitly state no backend needed
+
+# Technical specifications
+technical:
+  framework: "next"
+  typescript: true
+  responsive: true
+  scope:
+    backend_required: false    # Explicitly state no backend is required
+    api_required: false        # Explicitly state no API is required
+    database_required: false   # Explicitly state no database is required
+    testing_scope: "minimal"   # Minimal testing for a landing page
+    deployment: "simple"       # Simple deployment, no Docker needed
+  build_system: "next build"   # Use Next.js built-in build process
+  loading_strategy: "lazy-loading"
+  image_optimization: true
+  dark_mode: true
+  accessibility:
+    aria_labels: true
+    keyboard_navigation: true
+    screen_reader_support: true
+    color_contrast_compliance: true
+
+# Design e UX
+design:
+  theme: "futuristic-tech"
+  color_scheme:
+    primary: "#1976d2"  # Blu vibrante
+    secondary: "#9c27b0"  # Viola per accenti
+    accent: "#00e5ff"  # Ciano per effetti di luce
+    dark: "#121212"  # Sfondo scuro
+    light: "#ffffff"  # Elementi chiari
+  typography:
+    primary_font: "Space Grotesk"
+    secondary_font: "Inter"
+    code_font: "JetBrains Mono"
+  animations:
+    enable: true
+    type: "fluid"
+    scroll_reveal: true
+    code_typing: true  # Animazione di digitazione del codice
+    particle_background: true
+
+# Contenuto della pagina - manteniamo gli stessi contenuti
+features:
+  - hero_section:
+      title: "Virgil AI: Il Futuro dello Sviluppo Automatizzato"
+      subtitle: "Dall'idea al codice produzione-ready in pochi minuti"
+      cta_primary: "Prova Gratuitamente"
+      cta_secondary: "Scopri Come Funziona"
+      background: "dynamic-code-particles"
+      demo_visual: "ai-code-generation-animation"
+
+  - key_features:
+      title: "Reinventa il Tuo Sviluppo Software"
+      items:
+        - title: "Generazione Intelligente di Codice"
+          description: "Trasforma requisiti in progetti completi full-stack con architetture avanzate e best practices incorporate."
+          icon: "ai_brain_code"
+          visual: "code-generation-demo"
+          
+        - title: "Test Automatizzati Integrati"
+          description: "Genera test unitari, di integrazione e e2e contestuali durante la creazione del codice, garantendo robustezza."
+          icon: "test_automation"
+          visual: "test-generation-demo"
+          
+        - title: "Iterazione Continua Autonoma"
+          description: "Virgil AI analizza, corregge e migliora il codice attraverso iterazioni automatiche fino a raggiungere la perfezione."
+          icon: "iteration_cycle"
+          visual: "iteration-cycle-demo"
+          
+        - title: "Analisi del Codice Esistente"
+          description: "Importa progetti esistenti e ottienine analisi profonda, suggerimenti di miglioramento e documentazione automatica."
+          icon: "code_analysis"
+          visual: "code-analysis-demo"
+
+  - how_it_works:
+      title: "Come Funziona Virgil AI"
+      steps:
+        - title: "Definisci i Requisiti"
+          description: "Carica o scrivi le specifiche del tuo progetto in formato YAML, testo o diagrammi."
+          visual: "requirements-input"
+          
+        - title: "Selezione dell'AI"
+          description: "Scegli tra ChatGPT, Claude e altri modelli avanzati per la generazione del tuo codice."
+          visual: "ai-selection"
+          
+        - title: "Generazione e Test"
+          description: "Virgil AI crea l'intero progetto e sviluppa test per verificarne la correttezza."
+          visual: "generation-process"
+          
+        - title: "Iterazione Automatica"
+          description: "Il sistema risolve automaticamente i problemi rilevati e raffina il codice fino alla perfezione."
+          visual: "automated-refinement"
+          
+        - title: "Codice Pronto"
+          description: "Scarica il tuo progetto completo pronto per la produzione con documentazione integrata."
+          visual: "final-output"
+
+  - tech_details:
+      title: "Tecnologie Supportate"
+      languages:
+        - name: "JavaScript/TypeScript"
+          frameworks: ["React", "Next.js", "Vue", "Angular", "Express"]
+          icon: "js_ts_icon"
+        - name: "Python"
+          frameworks: ["FastAPI", "Django", "Flask"]
+          icon: "python_icon"
+        - name: "Dart"
+          frameworks: ["Flutter"]
+          icon: "dart_icon"
+        - name: "Java/Kotlin"
+          frameworks: ["Spring Boot", "Android"]
+          icon: "java_kotlin_icon"
+        - name: "C#"
+          frameworks: [".NET Core", "Blazor"]
+          icon: "csharp_icon"
+      databases:
+        - "PostgreSQL"
+        - "MongoDB"
+        - "MySQL"
+        - "Firebase"
+        - "Redis"
+      cloud:
+        - "AWS"
+        - "Google Cloud"
+        - "Azure"
+        - "Vercel"
+        - "Netlify"
+
+  - testimonials:
+      title: "I Nostri Utenti Parlano"
+      items:
+        - quote: "Abbiamo ridotto i tempi di sviluppo del 70% dal momento in cui abbiamo integrato Virgil AI nel nostro workflow."
+          author: "Maria Rossi"
+          company: "TechInnovate"
+          image: "maria_testimonial.jpg"
+          
+        - quote: "Con Virgil AI abbiamo trasformato un'idea in un MVP funzionante in un solo giorno. Semplicemente rivoluzionario."
+          author: "Alessandro Bianchi"
+          company: "StartupVision"
+          image: "alessandro_testimonial.jpg"
+          
+        - quote: "L'analisi del nostro codice legacy ha identificato vulnerabilità che erano sfuggite ai nostri controlli per mesi."
+          author: "Elena Verdi"
+          company: "SecureSystems"
+          image: "elena_testimonial.jpg"
+
+  - pricing:
+      title: "Piani su Misura per Ogni Esigenza"
+      plans:
+        - name: "Explorer"
+          price: "Gratuito"
+          features:
+            - "3 progetti al mese"
+            - "Fino a 1000 linee di codice per progetto"
+            - "Accesso ai modelli di base"
+            - "Supporto community"
+          cta: "Inizia Gratis"
+          highlight: false
+          
+        - name: "Professional"
+          price: "€49/mese"
+          features:
+            - "Progetti illimitati"
+            - "Fino a 10,000 linee di codice per progetto"
+            - "Accesso a tutti i modelli AI"
+            - "Test automatici avanzati"
+            - "Analisi del codice esistente"
+            - "Supporto prioritario"
+          cta: "Ottieni Professional"
+          highlight: true
+          
+        - name: "Enterprise"
+          price: "Personalizzato"
+          features:
+            - "Tutti i benefici di Professional"
+            - "Integrazione in CI/CD"
+            - "Deployment automatico"
+            - "API personalizzate"
+            - "Formazione dedicata"
+            - "Account manager dedicato"
+          cta: "Contattaci"
+          highlight: false
+
+  - cta_section:
+      title: "Entra nel Futuro dello Sviluppo Software"
+      subtitle: "Non generare semplice codice. Genera progetti completi pronti per la produzione."
+      cta_primary: "Prova Gratuitamente"
+      cta_secondary: "Richiedi una Demo"
+      background: "radial-gradient"
+
+# Componenti - semplificato e limitato al frontend
+components:
+  - navbar:
+      logo: "virgil_ai_logo.svg"
+      links:
+        - text: "Features"
+          url: "#features"
+        - text: "Come Funziona"
+          url: "#how-it-works"
+        - text: "Demo"
+          url: "#demo"
+        - text: "Prezzi"
+          url: "#pricing"
+        - text: "Blog"
+          url: "/blog"
+      cta:
+        text: "Inizia Ora"
+        url: "/signup"
+        highlight: true
+
+  - footer:
+      columns:
+        - title: "Prodotto"
+          links:
+            - text: "Features"
+              url: "#features"
+            - text: "Use Cases"
+              url: "/use-cases"
+            - text: "Roadmap"
+              url: "/roadmap"
+            - text: "Integrazioni"
+              url: "/integrations"
+        - title: "Risorse"
+          links:
+            - text: "Documentazione"
+              url: "/docs"
+            - text: "API Reference"
+              url: "/api"
+            - text: "Community"
+              url: "/community"
+            - text: "Tutorial"
+              url: "/tutorials"
+        - title: "Azienda"
+          links:
+            - text: "Chi Siamo"
+              url: "/about"
+            - text: "Blog"
+              url: "/blog"
+            - text: "Carriere"
+              url: "/careers"
+            - text: "Contatti"
+              url: "/contact"
+      social_links:
+        - platform: "github"
+          url: "https://github.com/virgilai"
+        - platform: "twitter"
+          url: "https://twitter.com/virgilai"
+        - platform: "linkedin"
+          url: "https://linkedin.com/company/virgilai"
+      copyright: "© 2025 Virgil AI. Tutti i diritti riservati."
+
+# Frontend-only interactive elements - Rinominato e semplificato questa sezione
+frontend_interactive_elements:
+  - code_showcase:  # Changed from "code_playground" to make it clearer this is just for display
+      enable: true
+      default_language: "yaml"
+      sample_code: |
+        project:
+          name: "My E-commerce App"
+          type: "fullstack"
+          description: "Online shop with user accounts and payments"
+        
+        features:
+          - authentication:
+              type: "jwt"
+              providers: ["email", "google"]
+          - products:
+              model: 
+                fields:
+                  - name: { type: "string", required: true }
+                  - price: { type: "number", required: true }
+                  - description: { type: "string" }
+                  - image: { type: "string", url: true }
+          - cart:
+              operations: ["add", "remove", "checkout"]
+          - payment:
+              providers: ["stripe"]
+              
+  - animation_showcase:  # Changed from "result_preview" to clarify this is just visual
+      enable: true
+      tabs:
+        - "Struttura Progetto"
+        - "Codice Frontend"
+        - "Codice Backend"
+        - "Test"
+        - "Documentazione"
+      animation_speed: "medium"
+
+  - model_comparison_display:  # Changed from "ai_model_comparison" to clarify this is just visual
+      enable: true
+      models:
+        - "ChatGPT (OpenAI)"
+        - "Claude (Anthropic)"
+        - "DeepSeek (RunPod)"
+      comparison_metrics:
+        - "Qualità del Codice"
+        - "Velocità di Generazione"
+        - "Accuratezza dei Test"
+        - "Ottimizzazione Performance"
+
+# SEO & Analytics
+seo:
+  title: "Virgil AI - La Piattaforma di Generazione Automatica di Codice e Test"
+  description: "Trasforma requisiti in progetti completi full-stack con test automatici e iterazioni intelligenti. Rivoluziona il tuo sviluppo software con Virgil AI."
+  og_image: "virgil_ai_og_image.png"
+  keywords:
+    - "generazione automatica di codice"
+    - "AI per sviluppatori"
+    - "test automatici"
+    - "analisi del codice"
+    - "generazione di progetti"
+    - "sviluppo accelerato"
+    - "intelligenza artificiale per programmazione"
+
+analytics:
+  google_analytics_id: "UA-XXXXXXXXX-X"
+  enable_heatmap: true
+  conversion_tracking: true
