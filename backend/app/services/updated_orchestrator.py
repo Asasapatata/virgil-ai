@@ -19,6 +19,8 @@ class UpdatedOrchestratorAgent:
     2. Code validation and compilation checking
     3. Enhanced test generation and execution
     4. Comprehensive error analysis and fixing
+    
+    🔥 AGGIORNATO: Aggiunge supporto per enhanced_generator mode
     """
     
     def __init__(self, llm_service: LLMService):
@@ -27,23 +29,38 @@ class UpdatedOrchestratorAgent:
         self.enhanced_test_agent = EnhancedTestAgent(llm_service)
         self.iteration_manager = IterationManager()
         self.stop_requested = False
-        logger.info("UpdatedOrchestratorAgent initialized")
+        
+        # 🔥 NUOVO: Supporto per Enhanced Generator
+        try:
+            from app.services.enhanced_code_generator import EnhancedCodeGenerator
+            self.enhanced_code_generator = EnhancedCodeGenerator(llm_service)
+            self.has_enhanced_generator = True
+            logger.info("UpdatedOrchestratorAgent initialized with Enhanced Generator support")
+        except ImportError:
+            self.enhanced_code_generator = None
+            self.has_enhanced_generator = False
+            logger.info("UpdatedOrchestratorAgent initialized without Enhanced Generator")
     
     async def generate_application_with_enhanced_flow(self, 
                                                     requirements: Dict[str, Any],
                                                     provider: str,
                                                     max_iterations: int,
                                                     project_path: Path,
-                                                    progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
+                                                    progress_callback: Optional[Callable] = None,
+                                                    generation_mode: str = "orchestrated") -> Dict[str, Any]:
         """
         Main orchestration method with enhanced flow
+        
+        🔥 NUOVO: Parametro generation_mode per supportare enhanced_generator
+        - "orchestrated": Usa il flusso orchestrato normale (default)
+        - "enhanced_single": Usa Enhanced Generator con validazione orchestrata
         """
         stop_file = project_path / "STOP_REQUESTED"
         if stop_file.exists():
             logger.info(f"Stop file found for project {project_path.name}, stopping generation")
             return {"status": "stopped", "reason": "user_requested"}
         
-        logger.info(f"Starting enhanced orchestrated generation with {max_iterations} max iterations")
+        logger.info(f"Starting enhanced orchestrated generation with {max_iterations} max iterations, mode: {generation_mode}")
         
         # Extract project name
         project_name = requirements.get("project", {}).get("name", project_path.name)
@@ -58,11 +75,81 @@ class UpdatedOrchestratorAgent:
             "iterations_completed": 0,
             "total_errors_fixed": 0,
             "remaining_issues": [],
-            "final_success": False
+            "final_success": False,
+            "generation_mode": generation_mode
         }
         
-        # Main iteration loop
-        for iteration in range(1, max_iterations + 1):
+        # 🔥 NUOVO: Se mode è enhanced_single, usa Enhanced Generator per generazione iniziale
+        if generation_mode == "enhanced_single" and self.has_enhanced_generator:
+            logger.info("Using Enhanced Generator for initial code generation")
+            
+            try:
+                # Genera codice con Enhanced Generator
+                if progress_callback:
+                    progress_callback(1, 'generating_with_enhanced_generator')
+                
+                enhanced_result = await self.enhanced_code_generator.generate_complete_project_enhanced(
+                    requirements=requirements,
+                    provider=provider,
+                    max_iterations=min(max_iterations, 3)  # Limit per Enhanced Generator
+                )
+                
+                if enhanced_result["success"]:
+                    # Crea struttura iterazione per il risultato
+                    iteration_structure = self.iteration_manager.create_iteration_structure(
+                        project_path, project_name, 1
+                    )
+                    
+                    # Salva i file generati
+                    files_generated, files_modified = self.iteration_manager.save_generated_code(
+                        iteration_structure, enhanced_result["code_files"]
+                    )
+                    
+                    logger.info(f"Enhanced Generator: Generated {files_generated} files, modified {files_modified}")
+                    
+                    # Processa con validazione orchestrata
+                    if progress_callback:
+                        progress_callback(1, 'validating_enhanced_code')
+                    
+                    iteration_result = await self.enhanced_test_agent.process_iteration_complete(
+                        iteration_structure, project_name, 1, requirements, enhanced_result["code_files"], provider
+                    )
+                    
+                    project_state["iterations_completed"] = 1
+                    project_state["remaining_issues"] = iteration_result.get("errors_for_fixing", [])
+                    
+                    # Se Enhanced Generator ha successo, ritorna subito
+                    if iteration_result["success"]:
+                        logger.info("Enhanced Generator completed successfully!")
+                        project_state["final_success"] = True
+                        
+                        return {
+                            "status": "completed",
+                            "iteration": 1,
+                            "project_id": project_path.name,
+                            "project_name": project_name,
+                            "output_path": str(iteration_structure.iteration_path),
+                            "project_state": project_state,
+                            "final_result": iteration_result,
+                            "generation_strategy": "enhanced_single_agent"
+                        }
+                    
+                    # Se ci sono errori, continua con orchestrazione normale per fixarli
+                    logger.info(f"Enhanced Generator had {len(project_state['remaining_issues'])} issues, continuing with orchestrated fixing")
+                    start_iteration = 2  # Inizia dalla iterazione 2
+                else:
+                    logger.warning("Enhanced Generator failed, falling back to orchestrated generation")
+                    start_iteration = 1
+                    
+            except Exception as e:
+                logger.error(f"Enhanced Generator error: {e}")
+                logger.info("Falling back to orchestrated generation")
+                start_iteration = 1
+        else:
+            start_iteration = 1
+        
+        # Main iteration loop (orchestrato normale o fixing dopo enhanced)
+        for iteration in range(start_iteration, max_iterations + 1):
             logger.info(f"Starting iteration {iteration} for project {project_name}")
             
             # Check for stop request
@@ -128,7 +215,8 @@ class UpdatedOrchestratorAgent:
                         "project_name": project_name,
                         "output_path": str(iteration_structure.iteration_path),
                         "project_state": project_state,
-                        "final_result": iteration_result
+                        "final_result": iteration_result,
+                        "generation_strategy": "enhanced_orchestrated" if generation_mode == "enhanced_single" else "orchestrated"
                     }
                 
                 # If not successful, prepare for next iteration
@@ -142,11 +230,11 @@ class UpdatedOrchestratorAgent:
                     project_state["total_errors_fixed"] += (prev_errors - current_errors)
                 
                 # Check if we're making progress
-                if iteration > 1 and current_errors >= prev_errors:
+                if iteration > start_iteration and current_errors >= prev_errors:
                     logger.warning(f"No progress made in iteration {iteration}, errors: {current_errors}")
                     
                     # If no progress for 2 consecutive iterations, consider stopping
-                    if iteration > 2:
+                    if iteration > start_iteration + 1:
                         logger.warning("No progress for multiple iterations, may stop early")
                 
                 # Continue to next iteration if we haven't reached max
@@ -196,8 +284,29 @@ class UpdatedOrchestratorAgent:
             "project_id": project_path.name,
             "project_name": project_name,
             "project_state": project_state,
-            "output_path": str(project_path / f"iter-{max_iterations}")
+            "output_path": str(project_path / f"iter-{max_iterations}"),
+            "generation_strategy": "enhanced_orchestrated" if generation_mode == "enhanced_single" else "orchestrated"
         }
+    
+    # 🔥 NUOVO: Metodo wrapper per enhanced_generator mode
+    async def generate_with_enhanced_generator_mode(self,
+                                                   requirements: Dict[str, Any],
+                                                   provider: str,
+                                                   max_iterations: int,
+                                                   project_path: Path,
+                                                   progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
+        """
+        Wrapper method specifically for enhanced_generator mode.
+        Usa Enhanced Generator con validazione orchestrata.
+        """
+        return await self.generate_application_with_enhanced_flow(
+            requirements=requirements,
+            provider=provider,
+            max_iterations=max_iterations,
+            project_path=project_path,
+            progress_callback=progress_callback,
+            generation_mode="enhanced_single"
+        )
     
     async def _generate_code_for_iteration(self, 
                                          requirements: Dict[str, Any],
@@ -207,6 +316,8 @@ class UpdatedOrchestratorAgent:
                                          project_name: str) -> Dict[str, str]:
         """
         Generate code for a specific iteration
+        
+        🔥 AGGIORNATO: Supporta Enhanced Generator per fixing intelligente
         """
         logger.info(f"Generating code for iteration {iteration}")
         
@@ -224,16 +335,91 @@ class UpdatedOrchestratorAgent:
             
             if previous_errors:
                 logger.info(f"Found {len(previous_errors)} errors from previous iteration")
-                code_files = await self._generate_code_with_fixes(
-                    requirements, provider, previous_errors, previous_files, iteration
-                )
+                
+                # 🔥 NUOVO: Usa Enhanced Generator per fixing se disponibile
+                if self.has_enhanced_generator and len(previous_errors) > 0:
+                    logger.info("Using Enhanced Generator for intelligent error fixing")
+                    try:
+                        code_files = await self.enhanced_code_generator.fix_issues_enhanced(
+                            code_files=previous_files,
+                            issues=previous_errors,
+                            provider=provider,
+                            context={
+                                "iteration": iteration,
+                                "project_type": requirements.get("project", {}).get("type", "fullstack"),
+                                "tech_stack": requirements.get("tech_stack", {})
+                            }
+                        )
+                        logger.info("Enhanced Generator fixed issues successfully")
+                    except Exception as e:
+                        logger.warning(f"Enhanced Generator fixing failed: {e}, falling back to standard fixing")
+                        code_files = await self._generate_code_with_fixes(
+                            requirements, provider, previous_errors, previous_files, iteration
+                        )
+                else:
+                    # Fallback al metodo standard
+                    code_files = await self._generate_code_with_fixes(
+                        requirements, provider, previous_errors, previous_files, iteration
+                    )
             else:
                 logger.info("No previous errors found, generating improved code")
-                code_files = await self._generate_improved_code(
-                    requirements, provider, previous_files, iteration
-                )
+                
+                # 🔥 NUOVO: Usa Enhanced Generator per miglioramenti se disponibile
+                if self.has_enhanced_generator:
+                    logger.info("Using Enhanced Generator for code quality improvements")
+                    try:
+                        # Determina focus areas per miglioramento
+                        focus_areas = self._determine_improvement_focus(requirements, iteration)
+                        
+                        code_files = await self.enhanced_code_generator.enhance_code_quality(
+                            code_files=previous_files,
+                            quality_focus=focus_areas,
+                            provider=provider
+                        )
+                        logger.info(f"Enhanced Generator improved code with focus: {', '.join(focus_areas)}")
+                    except Exception as e:
+                        logger.warning(f"Enhanced Generator improvement failed: {e}, falling back to standard")
+                        code_files = await self._generate_improved_code(
+                            requirements, provider, previous_files, iteration
+                        )
+                else:
+                    code_files = await self._generate_improved_code(
+                        requirements, provider, previous_files, iteration
+                    )
         
         return code_files
+    
+    def _determine_improvement_focus(self, requirements: Dict[str, Any], iteration: int) -> List[str]:
+        """
+        🔥 NUOVO: Determina le aree di focus per il miglioramento del codice
+        """
+        focus_areas = []
+        
+        # Focus basato sull'iterazione
+        iteration_focus = {
+            2: ["security", "error_handling"],
+            3: ["performance", "optimization"],
+            4: ["documentation", "maintainability"],
+            5: ["testing", "code_quality"]
+        }
+        
+        base_focus = iteration_focus.get(iteration, ["code_quality"])
+        focus_areas.extend(base_focus)
+        
+        # Focus basato sui requisiti
+        tech_stack = requirements.get("tech_stack", {})
+        if "database" in str(tech_stack).lower():
+            focus_areas.append("performance")
+        
+        if "authentication" in str(requirements).lower():
+            focus_areas.append("security")
+        
+        features = requirements.get("features", [])
+        if len(features) > 5:
+            focus_areas.append("maintainability")
+        
+        # Rimuovi duplicati
+        return list(set(focus_areas))
     
     async def _generate_initial_code(self, 
                                    requirements: Dict[str, Any], 

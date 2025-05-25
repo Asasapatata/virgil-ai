@@ -14,12 +14,622 @@ class EnhancedCodeGenerator:
     """
     Enhanced code generator that implements sophisticated prompting and
     specialized roles for different aspects of code generation.
+    
+    🔥 AGGIORNATO: Aggiunge metodi specifici per integrazione con sistema enhanced_v2
     """
     
     def __init__(self, llm_service: LLMService):
         self.llm_service = llm_service
         logger.info("EnhancedCodeGenerator initialized")
     
+    # 🔥 NUOVO: Metodo principale per integrazione con enhanced_v2 system
+    async def generate_complete_project_enhanced(self,
+                                               requirements: Dict[str, Any],
+                                               provider: str,
+                                               max_iterations: int = 5) -> Dict[str, Any]:
+        """
+        Genera un progetto completo usando il flusso enhanced con validazione e compilazione.
+        Questo è il metodo entry point per l'integrazione con il sistema enhanced_v2.
+        """
+        logger.info("Starting complete enhanced project generation")
+        
+        try:
+            # Analizza l'architettura del progetto
+            architecture_plan = await self._create_architecture_plan(requirements, provider)
+            
+            # Genera il codice base con piano architetturale
+            base_code = await self.generate_with_architecture(requirements, architecture_plan, provider)
+            
+            # Applica miglioramenti iterativi
+            enhanced_code = await self._apply_iterative_enhancements(
+                base_code, requirements, provider, max_iterations
+            )
+            
+            return {
+                "success": True,
+                "code_files": enhanced_code,
+                "architecture_plan": architecture_plan,
+                "iterations_applied": min(max_iterations, 3),  # Limit per enhanced generator
+                "generation_strategy": "enhanced_single_agent",
+                "file_count": len(enhanced_code)
+            }
+        
+        except Exception as e:
+            logger.error(f"Error in enhanced project generation: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "code_files": {},
+                "generation_strategy": "enhanced_single_agent"
+            }
+    
+    async def _create_architecture_plan(self, requirements: Dict[str, Any], provider: str) -> Dict[str, Any]:
+        """
+        Crea un piano architetturale dettagliato per il progetto
+        """
+        logger.info("Creating architecture plan")
+        
+        system_prompt = """
+        You are an expert software architect. Create a comprehensive architecture plan 
+        that will guide the code generation process. Focus on:
+        1. System architecture patterns
+        2. Component organization
+        3. Data flow design
+        4. Technology integration
+        5. Scalability considerations
+        """
+        
+        prompt = f"""
+        Create a detailed architecture plan for this project:
+        
+        {json.dumps(requirements, indent=2)}
+        
+        The plan should include:
+        1. Overall architecture pattern (MVC, Component-based, etc.)
+        2. Directory structure and file organization
+        3. Component breakdown and responsibilities
+        4. Data flow and API design
+        5. Integration points and dependencies
+        6. Technology-specific recommendations
+        
+        Provide the plan in JSON format with clear sections.
+        """
+        
+        try:
+            response = await self.llm_service.generate(provider, prompt, system_prompt)
+            
+            # Try to extract JSON
+            json_match = re.search(r'```json\n(.*?)\n```', response, re.DOTALL)
+            if json_match:
+                return json.loads(json_match.group(1))
+            else:
+                # Create basic plan from requirements
+                return self._create_basic_plan(requirements)
+        
+        except Exception as e:
+            logger.warning(f"Failed to create detailed architecture plan: {e}")
+            return self._create_basic_plan(requirements)
+    
+    def _create_basic_plan(self, requirements: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Crea un piano architetturale di base
+        """
+        tech_stack = requirements.get("tech_stack", {})
+        project_type = requirements.get("project", {}).get("type", "fullstack")
+        
+        return {
+            "architecture_pattern": "Component-based MVC",
+            "project_type": project_type,
+            "tech_stack": tech_stack,
+            "components": {
+                "frontend": {
+                    "framework": tech_stack.get("frontend", "React"),
+                    "structure": ["components", "pages", "hooks", "utils", "services"]
+                },
+                "backend": {
+                    "framework": tech_stack.get("backend", "Node.js"),
+                    "structure": ["routes", "controllers", "models", "middleware", "config"]
+                },
+                "database": {
+                    "type": tech_stack.get("database", "PostgreSQL"),
+                    "structure": ["models", "migrations", "seeds"]
+                }
+            },
+            "file_organization": {
+                "frontend_root": "frontend/src",
+                "backend_root": "backend/src",
+                "shared": "shared",
+                "config": "config"
+            },
+            "integration_points": ["API routes", "Database connections", "Authentication"]
+        }
+    
+    async def _apply_iterative_enhancements(self,
+                                          base_code: Dict[str, str],
+                                          requirements: Dict[str, Any],
+                                          provider: str,
+                                          max_iterations: int) -> Dict[str, str]:
+        """
+        Applica miglioramenti iterativi al codice base
+        """
+        logger.info(f"Applying iterative enhancements (max {max_iterations} iterations)")
+        
+        current_code = dict(base_code)
+        
+        # Limita le iterazioni per Enhanced Generator (è un singolo agente)
+        actual_iterations = min(max_iterations, 3)
+        
+        for iteration in range(1, actual_iterations + 1):
+            logger.info(f"Enhancement iteration {iteration}")
+            
+            # Determina focus per questa iterazione
+            focus_areas = self._get_enhancement_focus(iteration, requirements)
+            
+            try:
+                # Applica miglioramenti
+                enhanced_code = await self.enhance_code_quality(
+                    current_code, focus_areas, provider
+                )
+                
+                # Aggiorna il codice corrente
+                current_code = enhanced_code
+                
+                logger.info(f"Applied enhancements with focus: {', '.join(focus_areas)}")
+            
+            except Exception as e:
+                logger.warning(f"Enhancement iteration {iteration} failed: {e}")
+                break
+        
+        return current_code
+    
+    def _get_enhancement_focus(self, iteration: int, requirements: Dict[str, Any]) -> List[str]:
+        """
+        Determina il focus per ogni iterazione di miglioramento
+        """
+        # Focus diversi per ogni iterazione
+        iteration_focus = {
+            1: ["security", "error_handling"],
+            2: ["performance", "optimization"],
+            3: ["documentation", "code_quality"]
+        }
+        
+        base_focus = iteration_focus.get(iteration, ["code_quality"])
+        
+        # Aggiungi focus specifici basati sui requisiti
+        if "authentication" in str(requirements).lower():
+            base_focus.append("security")
+        if "database" in str(requirements).lower():
+            base_focus.append("performance")
+        if "api" in str(requirements).lower():
+            base_focus.append("api_design")
+        
+        return list(set(base_focus))  # Rimuovi duplicati
+    
+    # 🔥 NUOVO: Metodo per generazione rapida senza architettura complessa
+    async def generate_streamlined_code(self,
+                                      requirements: Dict[str, Any],
+                                      provider: str) -> Dict[str, str]:
+        """
+        Genera codice in modo streamlined per progetti semplici/moderati.
+        Usato quando non serve l'overhead completo dell'analisi architetturale.
+        """
+        logger.info("Generating streamlined code for moderate complexity project")
+        
+        project_type = requirements.get("project", {}).get("type", "fullstack")
+        tech_stack = requirements.get("tech_stack", {})
+        
+        # Crea prompt ottimizzato per generazione rapida ma di qualità
+        system_prompt = """
+        You are an expert full-stack developer. Generate clean, production-ready code 
+        following best practices for the specified technology stack. Focus on:
+        1. Clean, maintainable code structure
+        2. Proper error handling and validation
+        3. Security best practices
+        4. Performance optimization
+        5. Comprehensive documentation
+        """
+        
+        prompt = self._create_streamlined_prompt(requirements, project_type, tech_stack)
+        
+        try:
+            response = await self.llm_service.generate(provider, prompt, system_prompt)
+            files = self._extract_files(response)
+            
+            logger.info(f"Generated {len(files)} files in streamlined mode")
+            return files
+        
+        except Exception as e:
+            logger.error(f"Error in streamlined generation: {e}")
+            # Fallback to basic generation
+            return await self._generate_basic_fallback(requirements, provider)
+    
+    def _create_streamlined_prompt(self, 
+                                 requirements: Dict[str, Any],
+                                 project_type: str,
+                                 tech_stack: Dict[str, Any]) -> str:
+        """
+        Crea un prompt ottimizzato per generazione streamlined
+        """
+        # Extract key information
+        features = requirements.get("features", [])
+        security = requirements.get("security", [])
+        database_schema = requirements.get("database_schema", {})
+        
+        prompt = f"""
+        # Streamlined Code Generation
+        
+        Generate a complete {project_type} application with these specifications:
+        
+        ## Technology Stack
+        - Frontend: {tech_stack.get('frontend', 'React')}
+        - Backend: {tech_stack.get('backend', 'Node.js')}
+        - Database: {tech_stack.get('database', 'PostgreSQL')}
+        - API: {tech_stack.get('api', 'RESTful')}
+        - Auth: {tech_stack.get('auth', 'JWT')}
+        
+        ## Features to Implement
+        {self._format_features(features)}
+        
+        ## Security Requirements
+        {self._format_security(security)}
+        
+        ## Database Schema
+        {json.dumps(database_schema, indent=2) if database_schema else 'Design appropriate schema'}
+        
+        ## Complete Project Requirements
+        {json.dumps(requirements, indent=2)}
+        
+        ## Instructions
+        
+        Generate a complete, production-ready codebase with:
+        
+        1. **Frontend** ({tech_stack.get('frontend', 'React')}):
+           - Component-based architecture
+           - Routing and navigation
+           - State management
+           - API integration
+           - Authentication handling
+           - Responsive design
+        
+        2. **Backend** ({tech_stack.get('backend', 'Node.js')}):
+           - RESTful API endpoints
+           - Database integration
+           - Authentication middleware
+           - Input validation
+           - Error handling
+           - Security measures
+        
+        3. **Configuration**:
+           - Package management files
+           - Environment configuration
+           - Docker setup
+           - Development scripts
+        
+        ## Response Format
+        
+        For each file, use this exact format:
+        
+        FILE: path/to/file.ext
+        ```language
+        [complete file content]
+        ```
+        
+        Generate ALL necessary files for a working application.
+        Include proper error handling, validation, and security measures.
+        Follow best practices for the chosen technology stack.
+        """
+        
+        return prompt
+    
+    def _format_features(self, features: List[Any]) -> str:
+        """
+        Formatta le features per il prompt
+        """
+        if not features:
+            return "- Basic CRUD operations\n- User authentication\n- Data management"
+        
+        formatted = []
+        for feature in features:
+            if isinstance(feature, dict):
+                for name, details in feature.items():
+                    formatted.append(f"- {name}: {self._extract_feature_description(details)}")
+            elif isinstance(feature, str):
+                formatted.append(f"- {feature}")
+            else:
+                formatted.append(f"- {str(feature)}")
+        
+        return "\n".join(formatted)
+    
+    def _format_security(self, security: List[Any]) -> str:
+        """
+        Formatta i requisiti di sicurezza per il prompt
+        """
+        if not security:
+            return "- JWT authentication\n- Password hashing\n- Input validation\n- CORS protection"
+        
+        formatted = []
+        for item in security:
+            if isinstance(item, str):
+                formatted.append(f"- {item}")
+            else:
+                formatted.append(f"- {str(item)}")
+        
+        return "\n".join(formatted)
+    
+    def _extract_feature_description(self, details: Any) -> str:
+        """
+        Estrae una descrizione della feature
+        """
+        if isinstance(details, dict):
+            desc = details.get("description", "")
+            if desc:
+                return desc
+            # Try to create description from components or other fields
+            components = details.get("components", [])
+            if components:
+                return f"Includes {', '.join(components[:3])}"
+        
+        return str(details)[:100]  # Truncate long descriptions
+    
+    async def _generate_basic_fallback(self, requirements: Dict[str, Any], provider: str) -> Dict[str, str]:
+        """
+        Fallback di base se tutto il resto fallisce
+        """
+        logger.warning("Using basic fallback generation")
+        
+        # Import basic generator for fallback
+        try:
+            from app.services.code_generator import CodeGenerator
+            basic_gen = CodeGenerator(self.llm_service)
+            
+            project_type = requirements.get("project", {}).get("type", "fullstack")
+            
+            if project_type == "frontend":
+                return await basic_gen.generate_react_app(requirements, provider)
+            elif project_type == "backend":
+                return await basic_gen.generate_backend_api(requirements, provider)
+            else:
+                return await basic_gen.generate_code(requirements, provider, 1)
+        
+        except Exception as e:
+            logger.error(f"Even basic fallback failed: {e}")
+            return {}
+    
+    # 🔥 MIGLIORATO: Metodo fix_issues con better error handling
+    async def fix_issues_enhanced(self,
+                                code_files: Dict[str, str],
+                                issues: List[Dict[str, Any]],
+                                provider: str,
+                                context: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
+        """
+        Versione migliorata di fix_issues con context aggiuntivo
+        """
+        logger.info(f"Fixing {len(issues)} issues with enhanced context")
+        
+        if not issues:
+            logger.info("No issues to fix, returning original files")
+            return code_files
+        
+        # Group issues by priority and type
+        prioritized_issues = self._prioritize_issues(issues)
+        
+        # Fix issues in order of priority
+        fixed_files = dict(code_files)
+        
+        for priority_group in prioritized_issues:
+            try:
+                batch_fixes = await self._fix_issue_batch(
+                    fixed_files, priority_group, provider, context
+                )
+                fixed_files.update(batch_fixes)
+                
+                logger.info(f"Fixed {len(priority_group)} {priority_group[0].get('priority', 'medium')} priority issues")
+            
+            except Exception as e:
+                logger.warning(f"Failed to fix priority group: {e}")
+                continue
+        
+        return fixed_files
+    
+    def _prioritize_issues(self, issues: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
+        """
+        Raggruppa e prioritizza gli issues
+        """
+        high_priority = []
+        medium_priority = []
+        low_priority = []
+        
+        for issue in issues:
+            priority = issue.get("priority", "medium")
+            issue_type = issue.get("type", "unknown")
+            
+            # Critical issues: compilation, syntax errors
+            if priority == "high" or issue_type in ["compilation", "syntax", "import"]:
+                high_priority.append(issue)
+            elif priority == "low" or issue_type in ["style", "warning"]:
+                low_priority.append(issue)
+            else:
+                medium_priority.append(issue)
+        
+        return [group for group in [high_priority, medium_priority, low_priority] if group]
+    
+    async def _fix_issue_batch(self,
+                             code_files: Dict[str, str],
+                             issues: List[Dict[str, Any]],
+                             provider: str,
+                             context: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
+        """
+        Fixa un batch di issues correlati
+        """
+        if not issues:
+            return {}
+        
+        # Group issues by file
+        issues_by_file = {}
+        for issue in issues:
+            file_path = issue.get('file', 'unknown')
+            if file_path not in issues_by_file:
+                issues_by_file[file_path] = []
+            issues_by_file[file_path].append(issue)
+        
+        fixed_files = {}
+        
+        for file_path, file_issues in issues_by_file.items():
+            if file_path == 'unknown' or file_path not in code_files:
+                continue
+            
+            try:
+                fixed_content = await self._fix_single_file_enhanced(
+                    file_path, code_files[file_path], file_issues, provider, context
+                )
+                
+                if fixed_content:
+                    fixed_files[file_path] = fixed_content
+            
+            except Exception as e:
+                logger.warning(f"Failed to fix file {file_path}: {e}")
+                continue
+        
+        return fixed_files
+    
+    async def _fix_single_file_enhanced(self,
+                                      file_path: str,
+                                      content: str,
+                                      issues: List[Dict[str, Any]],
+                                      provider: str,
+                                      context: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        """
+        Fixa un singolo file con context enhancement
+        """
+        # Create enhanced prompt with context
+        prompt = self._create_enhanced_fixing_prompt(file_path, content, issues, context)
+        
+        system_prompt = """
+        You are an expert software engineer specializing in debugging and code fixing.
+        Your task is to fix specific issues while maintaining code functionality and quality.
+        
+        Key principles:
+        1. Fix only the reported issues
+        2. Maintain existing functionality
+        3. Improve code quality where possible
+        4. Add helpful comments for complex fixes
+        5. Ensure fixes don't introduce new problems
+        """
+        
+        try:
+            response = await self.llm_service.generate(provider, prompt, system_prompt)
+            
+            # Extract fixed file content
+            files = self._extract_files(response)
+            
+            if file_path in files:
+                return files[file_path]
+            elif len(files) == 1:
+                return list(files.values())[0]
+            else:
+                # Try to extract content directly
+                return self._extract_direct_content(response)
+        
+        except Exception as e:
+            logger.error(f"Error fixing file {file_path}: {e}")
+            return None
+    
+    def _create_enhanced_fixing_prompt(self,
+                                     file_path: str,
+                                     content: str,
+                                     issues: List[Dict[str, Any]],
+                                     context: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Crea un prompt enhanced per il fixing con context
+        """
+        # Format issues with priorities
+        issues_text = ""
+        for i, issue in enumerate(issues, 1):
+            priority = issue.get('priority', 'medium')
+            issue_type = issue.get('type', 'unknown')
+            message = issue.get('message', 'No description')
+            line = issue.get('line', 'unknown')
+            suggestion = issue.get('suggestion', '')
+            
+            issues_text += f"{i}. [{priority.upper()}] {issue_type} at line {line}\n"
+            issues_text += f"   Error: {message}\n"
+            if suggestion:
+                issues_text += f"   Suggestion: {suggestion}\n"
+            issues_text += "\n"
+        
+        # Add context information if available
+        context_text = ""
+        if context:
+            if "related_files" in context:
+                context_text += f"Related files: {', '.join(context['related_files'])}\n"
+            if "project_type" in context:
+                context_text += f"Project type: {context['project_type']}\n"
+            if "tech_stack" in context:
+                context_text += f"Tech stack: {context['tech_stack']}\n"
+        
+        return f"""
+        # Enhanced Code Fixing Task
+        
+        Fix the following issues in this file while maintaining functionality and improving code quality.
+        
+        ## File Information
+        Path: {file_path}
+        {context_text}
+        
+        ## Issues to Fix (in priority order)
+        {issues_text}
+        
+        ## Current File Content
+        ```
+        {content}
+        ```
+        
+        ## Instructions
+        
+        1. Fix each issue in priority order (HIGH → MEDIUM → LOW)
+        2. For each fix, ensure it doesn't break existing functionality
+        3. Add brief comments explaining complex fixes
+        4. Improve code quality where appropriate
+        5. Maintain consistent code style
+        
+        ## Response Format
+        
+        Provide the complete fixed file content:
+        
+        FILE: {file_path}
+        ```
+        [complete fixed file content]
+        ```
+        
+        Focus on fixing critical issues first, then improve overall code quality.
+        """
+    
+    def _extract_direct_content(self, response: str) -> Optional[str]:
+        """
+        Estrae il contenuto direttamente dalla risposta se non ci sono tag FILE
+        """
+        # Try to find code blocks
+        code_blocks = re.findall(r'```(?:\w+)?\s*\n(.*?)\n```', response, re.DOTALL)
+        
+        if code_blocks:
+            # Return the largest code block (likely the main content)
+            return max(code_blocks, key=len).strip()
+        
+        # If no code blocks, try to extract meaningful content
+        lines = response.split('\n')
+        content_lines = []
+        
+        for line in lines:
+            # Skip obvious metadata lines
+            if not any(skip in line.lower() for skip in ['file:', 'fixed', 'here is', 'the following']):
+                content_lines.append(line)
+        
+        if content_lines:
+            return '\n'.join(content_lines).strip()
+        
+        return None
+    
+    # Mantieni tutti i metodi esistenti del file originale
     async def generate_with_architecture(self, 
                                        requirements: Dict[str, Any],
                                        architecture_plan: Dict[str, Any],
@@ -558,10 +1168,13 @@ class EnhancedCodeGenerator:
         focus_to_patterns = {
             "security": [r'auth', r'login', r'password', r'user', r'permission'],
             "performance": [r'database', r'api', r'query', r'service', r'process'],
-            "documentation": [r'\.md$', r'README', r'docs'],
+            "documentation": [r'\.md', r'README', r'docs'],
             "testing": [r'test', r'spec'],
             "maintainability": [r'utils', r'helpers', r'common', r'shared'],
-            "accessibility": [r'component', r'ui', r'view', r'page']
+            "accessibility": [r'component', r'ui', r'view', r'page'],
+            "error_handling": [r'error', r'exception', r'handler'],
+            "api_design": [r'api', r'route', r'endpoint', r'controller'],
+            "optimization": [r'service', r'util', r'helper', r'performance']
         }
         
         # Get patterns for our focus areas
@@ -661,7 +1274,7 @@ class EnhancedCodeGenerator:
         
         # Different file patterns for different analysis types
         analysis_patterns = {
-            "architecture": [r'setup', r'config', r'main', r'index', r'app', r'\.md$'],
+            "architecture": [r'setup', r'config', r'main', r'index', r'app', r'\.md'],
             "security": [r'auth', r'login', r'user', r'api', r'route', r'controller'],
             "performance": [r'database', r'service', r'util', r'helper', r'process'],
             "quality": [r'component', r'service', r'model', r'controller'],
@@ -686,34 +1299,6 @@ class EnhancedCodeGenerator:
                     if len(selected_files) >= 10:
                         break
         
-        # For architecture analysis, ensure we have a diverse representation
-        if analysis_type == "architecture" and len(files) > 10:
-            # Create groups of similar files (by directory/extension)
-            file_groups = {}
-            for file_path in files:
-                parts = file_path.split('/')
-                if len(parts) > 1:
-                    group = parts[0]  # Group by top-level directory
-                else:
-                    ext = file_path.split('.')[-1] if '.' in file_path else 'unknown'
-                    group = f"root_{ext}"
-                
-                if group not in file_groups:
-                    file_groups[group] = []
-                file_groups[group].append(file_path)
-            
-            # Pick one file from each group until we have enough
-            selected_paths = set(selected_files.keys())
-            for group, paths in file_groups.items():
-                if len(selected_paths) >= 10:
-                    break
-                
-                for path in paths:
-                    if path not in selected_paths:
-                        selected_paths.add(path)
-                        selected_files[path] = files[path]
-                        break
-        
         return selected_files
     
     def _identify_core_files(self, files: Dict[str, str]) -> List[str]:
@@ -722,19 +1307,19 @@ class EnhancedCodeGenerator:
         """
         # Patterns for important files, ordered by priority
         core_patterns = [
-            r'package\.json$',
-            r'requirements\.txt$',
-            r'setup\.py$', 
-            r'tsconfig\.json$',
-            r'README\.md$',
-            r'main\.py$',
-            r'app\.py$',
-            r'index\.[jt]sx?$',
-            r'App\.[jt]sx?$',
-            r'settings\.py$',
-            r'config\.[jt]s$',
-            r'urls\.py$',
-            r'router\.[jt]s$'
+            r'package\.json',
+            r'requirements\.txt',
+            r'setup\.py', 
+            r'tsconfig\.json',
+            r'README\.md',
+            r'main\.py',
+            r'app\.py',
+            r'index\.[jt]sx?',
+            r'App\.[jt]sx?',
+            r'settings\.py',
+            r'config\.[jt]s',
+            r'urls\.py',
+            r'router\.[jt]s'
         ]
         
         core_files = []

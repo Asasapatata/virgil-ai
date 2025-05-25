@@ -11,6 +11,7 @@ from datetime import datetime  # Aggiungere questo import
 
 from app.core.config import settings
 
+
 # Create Celery app
 celery = Celery('tasks',
                 broker=settings.REDIS_URL,
@@ -168,129 +169,214 @@ def process_multi_agent_generation(self,
             "current_iteration": current_iteration
         }
 
-# In app/tasks/celery_app.py
-
-# In backend/app/tasks/celery_app.py
-
-# 🔥 NUOVO TASK ENHANCED che sostituisce process_agent_generation per smart generation
+# 🔥 AGGIORNATO: Task enhanced che ora supporta tutti gli agent modes
 @celery.task(bind=True)
-def process_enhanced_code_generation(self,
-                                   project_id: str,
-                                   llm_provider: str,
-                                   max_iterations: int = 10,
-                                   agent_mode: str = "updated_orchestrator"):
+def process_enhanced_code_generation(self, project_id: str, llm_provider: str, max_iterations: int = 10, agent_mode: str = "updated_orchestrator"):
     """
-    Enhanced task che usa il nuovo orchestratore basato su agent_mode.
-    Questo task viene chiamato dalla smart generation.
+    🔥 AGGIORNATO: Task enhanced che supporta routing intelligente tra tutti gli agent modes
+    Supporta: original, enhanced_generator, updated_orchestrator, multi_agent
     """
-    
+    import asyncio
+    return asyncio.run(_async_process_enhanced_code_generation(self, project_id, llm_provider, max_iterations, agent_mode))
+
+
+async def _async_process_enhanced_code_generation(self, project_id: str, llm_provider: str, max_iterations: int, agent_mode: str):
+    from datetime import datetime
+    from pathlib import Path
+    import json
+    import logging
+
     project_path = Path(f"output/{project_id}")
-    
+    logger = logging.getLogger(__name__)
+    logger.info(f"Starting enhanced generation with agent_mode: {agent_mode} for {project_id}")
+
+    with open(project_path / "project.json", 'r') as f:
+        project_data = json.load(f)
+
+    requirements = project_data.get('requirements', {})
+    project_data["status"] = "processing"
+    project_data["task_id"] = self.request.id
+    project_data["generation_mode"] = "enhanced_v2"
+    project_data["agent_mode"] = agent_mode
+    project_data["started_at"] = datetime.now().isoformat()
+
+    with open(project_path / "project.json", 'w') as f:
+        json.dump(project_data, f, indent=2)
+
+    def progress_callback(iteration: int, status: str):
+        self.update_state(
+            state='PROGRESS',
+            meta={
+                'current': iteration,
+                'total': max_iterations,
+                'status': status,
+                'agent_mode': agent_mode,
+                'generation_mode': 'enhanced_v2'
+            }
+        )
+
+    from app.services.llm_service import LLMService
+    llm_service = LLMService()
+
+    # 🔥 ROUTING INTELLIGENTE: Seleziona il generatore basato su agent_mode
     try:
-        logger = logging.getLogger(__name__)
-        logger.info(f"Starting enhanced generation for {project_id} with {agent_mode} mode")
-        
-        # Load project data
-        with open(project_path / "project.json", 'r') as f:
-            project_data = json.load(f)
-        
-        requirements = project_data.get('requirements', {})
-        
-        # Update project status
-        project_data["status"] = "processing"
-        project_data["task_id"] = self.request.id
-        project_data["generation_mode"] = "enhanced_v2"
-        project_data["agent_mode"] = agent_mode
-        
-        with open(project_path / "project.json", 'w') as f:
-            json.dump(project_data, f, indent=2)
-        
-        # Progress callback
-        def progress_callback(iteration: int, status: str):
-            self.update_state(
-                state='PROGRESS',
-                meta={
-                    'current': iteration,
-                    'total': max_iterations,
-                    'status': status,
-                    'agent_mode': agent_mode
-                }
+        if agent_mode == "enhanced_generator":
+            # 🎯 USA: Enhanced Code Generator per progetti moderati come NovaPLM
+            logger.info("Using Enhanced Code Generator for moderate complexity project")
+            
+            from app.services.enhanced_code_generator import EnhancedCodeGenerator
+            generator = EnhancedCodeGenerator(llm_service)
+            
+            # Genera usando il metodo principale del Enhanced Generator
+            result = await generator.generate_complete_project_enhanced(
+                requirements=requirements,
+                provider=llm_provider,
+                max_iterations=max_iterations
             )
-        
-        # 🎯 DECISION LOGIC: Scegli orchestratore basato su agent_mode
-        if agent_mode == "original":
-            # 🔄 BACKWARD COMPATIBILITY: Usa il vecchio sistema solo per "original"
-            logger.info("Using original orchestrator for backward compatibility")
             
-            from app.services.orchestrator import OrchestratorAgent
-            from app.services.llm_service import LLMService
-            
-            llm_service = LLMService()
-            orchestrator = OrchestratorAgent(llm_service)
-            
-            result = asyncio.run(
-                orchestrator.generate_application_with_orchestration(
-                    requirements=requirements,
-                    provider=llm_provider,
-                    max_iterations=max_iterations,
-                    project_path=project_path,
-                    progress_callback=progress_callback
+            # Adatta il risultato al formato enhanced_v2
+            if result["success"]:
+                # Salva i file nell'iterazione 1
+                from app.services.iteration_manager import IterationManager
+                iteration_manager = IterationManager()
+                
+                project_name = requirements.get("project", {}).get("name", project_id)
+                iteration_structure = iteration_manager.create_iteration_structure(
+                    project_path, project_name, 1
                 )
-            )
-        
-        else:
-            # 🔥 NUOVO: Usa enhanced orchestrator per tutti gli altri modi
-            logger.info(f"Using enhanced orchestrator for {agent_mode} mode")
+                
+                files_generated, files_modified = iteration_manager.save_generated_code(
+                    iteration_structure, result["code_files"]
+                )
+                
+                result = {
+                    "status": "completed",
+                    "iteration": 1,
+                    "project_id": project_id,
+                    "project_name": project_name,
+                    "output_path": str(iteration_structure.iteration_path),
+                    "files_generated": files_generated,
+                    "files_modified": files_modified,
+                    "generation_strategy": "enhanced_single_agent",
+                    "final_result": result
+                }
+            else:
+                result = {
+                    "status": "failed",
+                    "error": result.get("error", "Unknown error"),
+                    "project_id": project_id,
+                    "generation_strategy": "enhanced_single_agent"
+                }
+                
+        elif agent_mode == "updated_orchestrator":
+            # 🔥 USA: Updated Orchestrator per progetti complessi
+            logger.info("Using Updated Orchestrator for complex project")
             
             from app.services.updated_orchestrator import UpdatedOrchestratorAgent
-            from app.services.llm_service import LLMService
-            
-            llm_service = LLMService()
             orchestrator = UpdatedOrchestratorAgent(llm_service)
             
-            # Adatta max_iterations basato su agent_mode
-            if agent_mode == "enhanced_generator":
-                max_iterations = min(max_iterations, 5)  # Limita iterazioni per generatore singolo
-            elif agent_mode == "updated_orchestrator":
-                max_iterations = min(max_iterations, 10)  # Iterazioni medie
-            # multi_agent mantiene max_iterations originale
-            
-            result = asyncio.run(
-                orchestrator.generate_application_with_enhanced_flow(
-                    requirements=requirements,
-                    provider=llm_provider,
-                    max_iterations=max_iterations,
-                    project_path=project_path,
-                    progress_callback=progress_callback
-                )
+            result = await orchestrator.generate_application_with_enhanced_flow(
+                requirements=requirements,
+                provider=llm_provider,
+                max_iterations=max_iterations,
+                project_path=project_path,
+                progress_callback=progress_callback
             )
             
-            # Generate final project se completato con successo
-            if result["status"] in ["completed", "completed_with_issues", "completed_with_improvements"]:
-                logger.info("Generating final consolidated project")
-                try:
-                    final_result = asyncio.run(
-                        orchestrator.generate_final_project(
-                            project_path, result.get("project_name", project_id)
-                        )
+        elif agent_mode == "multi_agent":
+            # 🔥 USA: Multi-Agent per progetti enterprise
+            logger.info("Using Multi-Agent system for enterprise project")
+            
+            from app.services.multi_agent_orchestrator import MultiAgentOrchestrator
+            orchestrator = MultiAgentOrchestrator(llm_service)
+            
+            result = await orchestrator.generate_multi_agent_application(
+                requirements=requirements,
+                provider=llm_provider,
+                max_iterations=max_iterations,
+                project_path=project_path,
+                progress_callback=progress_callback
+            )
+            
+        elif agent_mode == "original":
+            # 🔄 BACKWARD COMPATIBILITY: Sistema originale
+            logger.info("Using original system for backward compatibility")
+            
+            from app.services.orchestrator import OrchestratorAgent
+            orchestrator = OrchestratorAgent(llm_service)
+            
+            result = await orchestrator.generate_application_with_orchestration(
+                requirements=requirements,
+                provider=llm_provider,
+                max_iterations=max_iterations,
+                project_path=project_path,
+                progress_callback=progress_callback
+            )
+            
+        else:
+            # 🚨 FALLBACK: Agent mode sconosciuto
+            logger.warning(f"Unknown agent_mode: {agent_mode}, falling back to updated_orchestrator")
+            
+            from app.services.updated_orchestrator import UpdatedOrchestratorAgent
+            orchestrator = UpdatedOrchestratorAgent(llm_service)
+            
+            result = await orchestrator.generate_application_with_enhanced_flow(
+                requirements=requirements,
+                provider=llm_provider,
+                max_iterations=max_iterations,
+                project_path=project_path,
+                progress_callback=progress_callback
+            )
+
+        # Generate final project if completed successfully
+        if result["status"] in ["completed", "completed_with_issues", "completed_with_improvements"]:
+            logger.info("Generating final consolidated project")
+            try:
+                if agent_mode == "enhanced_generator":
+                    # Per enhanced generator, il progetto finale è già nella struttura
+                    logger.info("Enhanced generator completed - project in iteration structure")
+                elif agent_mode in ["updated_orchestrator", "multi_agent"]:
+                    # Per altri modi, usa UpdatedOrchestratorAgent per generare final
+                    from app.services.updated_orchestrator import UpdatedOrchestratorAgent
+                    orchestrator = UpdatedOrchestratorAgent(llm_service)
+                    
+                    final_result = await orchestrator.generate_final_project(
+                        project_path, result.get("project_name", project_id)
                     )
                     result["final_project"] = final_result
                     logger.info("Final project generated successfully")
-                except Exception as e:
-                    logger.warning(f"Could not generate final project: {e}")
-                    result["final_project"] = {"success": False, "error": str(e)}
-        
-        # Update final status
+            except Exception as e:
+                logger.warning(f"Could not generate final project: {e}")
+                result["final_project"] = {"success": False, "error": str(e)}
+
+        # Update final status with enhanced metrics
         project_data['status'] = result["status"]
         project_data['final_result'] = result
         project_data['completed_at'] = datetime.now().isoformat()
+        project_data['generation_strategy'] = result.get('generation_strategy', agent_mode)
         
+        # Add performance metrics
+        if 'started_at' in project_data:
+            started = datetime.fromisoformat(project_data['started_at'])
+            completed = datetime.fromisoformat(project_data['completed_at'])
+            duration = (completed - started).total_seconds()
+            project_data['generation_duration_seconds'] = duration
+            project_data['generation_duration_minutes'] = round(duration / 60, 2)
+            
+            # Add performance rating
+            if duration < 180:  # < 3 minutes
+                project_data['performance_rating'] = 'fast'
+            elif duration < 600:  # < 10 minutes
+                project_data['performance_rating'] = 'normal'
+            else:
+                project_data['performance_rating'] = 'slow'
+
         with open(project_path / "project.json", 'w') as f:
             json.dump(project_data, f, indent=2)
-        
+
         logger.info(f"Enhanced generation completed for {project_id}: {result['status']}")
         return result
-        
+
     except Exception as e:
         logger.error(f"Enhanced process error for {project_id}: {str(e)}")
         import traceback
@@ -298,13 +384,15 @@ def process_enhanced_code_generation(self,
         logger.error(f"Error details: {error_details}")
         
         try:
-            # Update project status to failed
+            # Update project status to failed with detailed error info
             with open(project_path / "project.json", 'r') as f:
                 project_data = json.load(f)
             
             project_data['status'] = 'failed'
             project_data['error'] = str(e)
+            project_data['error_details'] = error_details
             project_data['failed_at'] = datetime.now().isoformat()
+            project_data['generation_strategy'] = agent_mode
             
             with open(project_path / "project.json", 'w') as f:
                 json.dump(project_data, f, indent=2)
@@ -314,9 +402,45 @@ def process_enhanced_code_generation(self,
         return {
             "status": "error",
             "error": str(e),
-            "project_id": project_id
+            "project_id": project_id,
+            "generation_strategy": agent_mode
         }
-    
+
+# 🔥 NUOVO: Task per ottenere riassunto test
+@celery.task
+def get_test_execution_summary(project_id: str):
+    """Ottieni riassunto esecuzione test per un progetto"""
+    try:
+        from app.services.output_manager import OutputManager
+        from app.services.consolidated_test_runner import ConsolidatedTestRunner
+        
+        project_path = Path(f"output/{project_id}")
+        output_manager = OutputManager(project_path)
+        test_runner = ConsolidatedTestRunner(output_manager)
+        
+        return test_runner.get_test_execution_summary(project_path)
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+# 🔥 NUOVO: Task per cleanup ambienti test
+@celery.task  
+def cleanup_test_environments(project_id: str):
+    """Pulisce ambienti test temporanei per un progetto"""
+    try:
+        from app.services.output_manager import OutputManager
+        from app.services.consolidated_test_runner import ConsolidatedTestRunner
+        
+        project_path = Path(f"output/{project_id}")
+        output_manager = OutputManager(project_path)
+        test_runner = ConsolidatedTestRunner(output_manager)
+        
+        test_runner.cleanup_test_environments()
+        return {"success": True, "message": "Test environments cleaned up"}
+        
+    except Exception as e:
+        return {"error": str(e)}
+
 @celery.task(bind=True)
 def process_agent_generation(self, project_id, llm_provider="openai", max_iterations=10, agent_mode="multi_agent"):
     """
@@ -392,12 +516,12 @@ def process_agent_generation(self, project_id, llm_provider="openai", max_iterat
             
         elif agent_mode == "updated_orchestrator":
             # Sistema con orchestratore migliorato
-            from app.services.updated_orchestrator import EnhancedOrchestrator
-            orchestrator = EnhancedOrchestrator(llm_service)
+            from app.services.updated_orchestrator import UpdatedOrchestratorAgent
+            orchestrator = UpdatedOrchestratorAgent(llm_service)
             
             # Usa il metodo corretto
             result = asyncio.run(
-                orchestrator.generate_application_with_orchestration(
+                orchestrator.generate_application_with_enhanced_flow(
                     requirements=requirements,
                     provider=llm_provider,
                     max_iterations=max_iterations,
@@ -413,8 +537,7 @@ def process_agent_generation(self, project_id, llm_provider="openai", max_iterat
             
             # Usa il metodo corretto
             result = asyncio.run(
-                generator.generate_complete_project(
-                    project_id=project_id,
+                generator.generate_complete_project_enhanced(
                     requirements=requirements,
                     provider=llm_provider,
                     max_iterations=max_iterations

@@ -27,7 +27,7 @@ class RequirementsAnalyzer:
     Analyzes project requirements to determine the appropriate
     generation strategy and agent mode.
     
-    🔥 NUOVO: Include sistema di routing tra vecchio e nuovo sistema
+    🔥 AGGIORNATO: Logica perfezionata per Enhanced Generator routing
     """
     
     def __init__(self):
@@ -52,14 +52,14 @@ class RequirementsAnalyzer:
         """
         Analyzes requirements and returns generation strategy.
         
-        🔥 NUOVO: Include routing information per sistema da usare
+        🔥 AGGIORNATO: Logica migliorata per Enhanced Generator
         
         Returns:
             Dict containing:
             - complexity: ProjectComplexity
             - agent_mode: AgentMode
-            - system_version: SystemVersion (NUOVO)
-            - v2_mode: str (NUOVO - modalità specifica per sistema v2)
+            - system_version: SystemVersion
+            - v2_mode: str (modalità specifica per sistema v2)
             - reasoning: List of reasons for the decision
             - max_iterations: Recommended max iterations
             - features_detected: List of detected features
@@ -69,9 +69,9 @@ class RequirementsAnalyzer:
         project_type = self._extract_project_type(requirements)
         features_detected = self._detect_features(requirements)
         complexity = self._assess_complexity(requirements, features_detected)
-        agent_mode = self._recommend_agent_mode(complexity, features_detected)
+        agent_mode = self._recommend_agent_mode(complexity, features_detected, requirements)
         max_iterations = self._recommend_iterations(complexity, agent_mode)
-        reasoning = self._generate_reasoning(complexity, features_detected, agent_mode)
+        reasoning = self._generate_reasoning(complexity, features_detected, agent_mode, requirements)
         
         # 🔥 NUOVO: Determina quale sistema usare
         system_version = self.SYSTEM_MAPPING[agent_mode.value]
@@ -81,18 +81,161 @@ class RequirementsAnalyzer:
             "project_type": project_type,
             "complexity": complexity,
             "agent_mode": agent_mode,
-            "system_version": system_version,  # 🔥 NUOVO
-            "v2_mode": v2_mode,               # 🔥 NUOVO
+            "system_version": system_version,
+            "v2_mode": v2_mode,
             "max_iterations": max_iterations,
             "features_detected": features_detected,
             "reasoning": reasoning,
             "estimated_files": self._estimate_file_count(complexity, features_detected),
             "estimated_duration": self._estimate_duration(complexity, agent_mode),
-            "routing_info": self._get_routing_info(system_version, agent_mode, v2_mode)  # 🔥 NUOVO
+            "routing_info": self._get_routing_info(system_version, agent_mode, v2_mode),
+            "is_standard_stack": self._is_standard_tech_stack(requirements.get("tech_stack", {}))
         }
         
         logger.info(f"Project analysis: {complexity} complexity, {agent_mode} mode, {system_version} system")
+        logger.info(f"Features: {len(features_detected)} detected - {', '.join(features_detected[:5])}")
+        
         return analysis
+    
+    def _recommend_agent_mode(self, 
+                            complexity: ProjectComplexity, 
+                            features: List[str], 
+                            requirements: Dict[str, Any]) -> AgentMode:
+        """
+        🔥 AGGIORNATO: Logica perfezionata per raccomandazione agent mode
+        
+        Questa è la logica che determina perché NovaPLM usa enhanced_generator!
+        """
+        
+        feature_count = len(features)
+        tech_stack = requirements.get("tech_stack", {})
+        is_standard_stack = self._is_standard_tech_stack(tech_stack)
+        
+        logger.info(f"Agent mode decision: complexity={complexity}, features={feature_count}, standard_stack={is_standard_stack}")
+        
+        if complexity == ProjectComplexity.SIMPLE:
+            # Per progetti semplici
+            if feature_count <= 2:
+                return AgentMode.SINGLE
+            else:
+                return AgentMode.ENHANCED
+        
+        elif complexity == ProjectComplexity.MODERATE:
+            # 🎯 QUI: La logica per NovaPLM
+            
+            # Se ha DB + API ed è uno stack standard, usa enhanced_generator
+            has_database = "database" in features
+            has_api = "api_endpoints" in features
+            
+            if has_database and has_api and is_standard_stack and feature_count <= 6:
+                logger.info(f"Selecting enhanced_generator: standard stack ({tech_stack}) with {feature_count} features")
+                return AgentMode.ENHANCED  # ✅ NovaPLM finisce qui
+            
+            # Altrimenti usa orchestrator
+            elif has_database or has_api or feature_count > 4:
+                return AgentMode.ORCHESTRATED
+            
+            # Default per moderate
+            return AgentMode.ENHANCED
+        
+        elif complexity == ProjectComplexity.COMPLEX:
+            # Per progetti complessi
+            if feature_count > 8 or not is_standard_stack:
+                return AgentMode.MULTI_AGENT
+            else:
+                return AgentMode.ORCHESTRATED
+        
+        elif complexity == ProjectComplexity.ENTERPRISE:
+            # Per progetti enterprise, sempre multi-agent
+            return AgentMode.MULTI_AGENT
+        
+        # Default safe choice
+        return AgentMode.ENHANCED
+    
+    def _is_standard_tech_stack(self, tech_stack: Dict[str, Any]) -> bool:
+        """
+        🔥 AGGIORNATO: Verifica se il tech stack è standard e ben supportato
+        
+        Questa funzione determina se NovaPLM ha uno stack "standard"!
+        """
+        if not tech_stack:
+            return True
+        
+        # Normalize values for comparison
+        frontend = str(tech_stack.get("frontend", "")).lower()
+        backend = str(tech_stack.get("backend", "")).lower()
+        database = str(tech_stack.get("database", "")).lower()
+        
+        # Standard frontend frameworks
+        standard_frontends = ["react", "vue", "angular", "nextjs", "nuxt"]
+        frontend_is_standard = any(f in frontend for f in standard_frontends)
+        
+        # Standard backend frameworks  
+        standard_backends = ["node.js", "node", "express", "fastapi", "django", "flask", "python"]
+        backend_is_standard = any(b in backend for b in standard_backends)
+        
+        # Standard databases
+        standard_databases = ["postgresql", "postgres", "mysql", "sqlite", "mongodb", "mongo"]
+        database_is_standard = any(d in database for d in standard_databases) if database else True
+        
+        # 🎯 CONDIZIONE: Stack è standard se frontend E backend sono standard
+        is_standard = frontend_is_standard and backend_is_standard and database_is_standard
+        
+        logger.info(f"Tech stack analysis: frontend={frontend}({frontend_is_standard}), backend={backend}({backend_is_standard}), db={database}({database_is_standard}) → standard={is_standard}")
+        
+        return is_standard
+    
+    def _generate_reasoning(self, 
+                          complexity: ProjectComplexity, 
+                          features: List[str], 
+                          agent_mode: AgentMode,
+                          requirements: Dict[str, Any]) -> List[str]:
+        """
+        🔥 AGGIORNATO: Reasoning più dettagliato
+        """
+        reasoning = []
+        
+        # Complexity reasoning
+        feature_count = len(features)
+        if complexity == ProjectComplexity.SIMPLE:
+            reasoning.append(f"Project identified as simple ({feature_count} features, basic functionality)")
+        elif complexity == ProjectComplexity.MODERATE:
+            reasoning.append(f"Project has moderate complexity ({feature_count} features, standard business app)")
+        elif complexity == ProjectComplexity.COMPLEX:
+            reasoning.append(f"Project is complex ({feature_count} features, advanced integrations)")
+        elif complexity == ProjectComplexity.ENTERPRISE:
+            reasoning.append(f"Project has enterprise-level complexity ({feature_count}+ features)")
+        
+        # Tech stack reasoning
+        tech_stack = requirements.get("tech_stack", {})
+        if self._is_standard_tech_stack(tech_stack):
+            stack_desc = f"{tech_stack.get('frontend', 'Unknown')} + {tech_stack.get('backend', 'Unknown')}"
+            reasoning.append(f"Standard technology stack detected: {stack_desc}")
+        else:
+            reasoning.append("Non-standard or complex technology stack")
+        
+        # Feature-based reasoning
+        key_features = ["authentication", "database", "api_endpoints", "external_integrations", "payments"]
+        detected_key_features = [f for f in key_features if f in features]
+        if detected_key_features:
+            reasoning.append(f"Key features detected: {', '.join(detected_key_features)}")
+        
+        # Agent mode reasoning con più dettagli
+        if agent_mode == AgentMode.SINGLE:
+            reasoning.append("Using original single agent for simple, focused generation")
+        elif agent_mode == AgentMode.ENHANCED:
+            reasoning.append(f"Using enhanced generator: optimal for {feature_count} features with standard stack")
+        elif agent_mode == AgentMode.ORCHESTRATED:
+            reasoning.append("Using orchestrated approach for complex coordination needs")
+        elif agent_mode == AgentMode.MULTI_AGENT:
+            reasoning.append("Using multi-agent system for comprehensive enterprise development")
+        
+        # 🔥 NUOVO: Reasoning specifico per Enhanced Generator
+        if agent_mode == AgentMode.ENHANCED:
+            reasoning.append(f"Enhanced Generator chosen: efficient single-agent with quality validation")
+            reasoning.append(f"Expected generation time: 3-8 minutes (vs 15-60 for multi-agent)")
+        
+        return reasoning
     
     def _extract_project_type(self, requirements: Dict[str, Any]) -> str:
         """Extract the explicit or implicit project type"""
@@ -103,8 +246,8 @@ class RequirementsAnalyzer:
             return project["type"].lower()
         
         # Infer from structure
-        has_backend = "backend" in requirements
-        has_frontend = "frontend" in requirements
+        has_backend = "backend" in requirements or "tech_stack" in requirements and "backend" in requirements["tech_stack"]
+        has_frontend = "frontend" in requirements or "tech_stack" in requirements and "frontend" in requirements["tech_stack"]
         has_database = self._has_database(requirements)
         
         if has_backend and has_frontend:
@@ -171,7 +314,11 @@ class RequirementsAnalyzer:
         return features
     
     def _assess_complexity(self, requirements: Dict[str, Any], features: List[str]) -> ProjectComplexity:
-        """Assess overall project complexity"""
+        """
+        🔥 AGGIORNATO: Valutazione complessità più precisa
+        """
+        feature_count = len(features)
+        tech_stack = requirements.get("tech_stack", {})
         
         # Simple: Static sites, landing pages
         if self._is_simple_project(requirements, features):
@@ -185,36 +332,16 @@ class RequirementsAnalyzer:
         if self._is_complex_project(requirements, features):
             return ProjectComplexity.COMPLEX
         
-        # Moderate: Frontend with some backend or interactivity
+        # 🎯 MODERATE: Qui finisce NovaPLM
+        # - Ha 5 features (auth, database, api, pages, uploads)  
+        # - È fullstack ma non troppo complesso
+        # - Stack standard (React + Node + PostgreSQL)
         return ProjectComplexity.MODERATE
     
-    def _recommend_agent_mode(self, complexity: ProjectComplexity, features: List[str]) -> AgentMode:
-        """Recommend the appropriate agent mode based on complexity"""
-        
-        if complexity == ProjectComplexity.SIMPLE:
-            # For simple projects, use single agent
-            if len(features) <= 2 and "interactive_elements" in features:
-                return AgentMode.ENHANCED
-            return AgentMode.SINGLE
-        
-        elif complexity == ProjectComplexity.MODERATE:
-            # For moderate projects, use enhanced generator
-            if "api_endpoints" in features or "database" in features:
-                return AgentMode.ORCHESTRATED
-            return AgentMode.ENHANCED
-        
-        elif complexity == ProjectComplexity.COMPLEX:
-            # For complex projects, use multi-agent
-            return AgentMode.MULTI_AGENT
-        
-        elif complexity == ProjectComplexity.ENTERPRISE:
-            # For enterprise projects, always use multi-agent
-            return AgentMode.MULTI_AGENT
-        
-        return AgentMode.ENHANCED
-    
     def _recommend_iterations(self, complexity: ProjectComplexity, agent_mode: AgentMode) -> int:
-        """Recommend maximum iterations based on complexity"""
+        """
+        🔥 AGGIORNATO: Iterazioni raccomandate più precise
+        """
         
         iteration_map = {
             ProjectComplexity.SIMPLE: {
@@ -225,7 +352,7 @@ class RequirementsAnalyzer:
             },
             ProjectComplexity.MODERATE: {
                 AgentMode.SINGLE: 3,
-                AgentMode.ENHANCED: 5,
+                AgentMode.ENHANCED: 4,  # 🎯 NovaPLM: 4 iterations per enhanced_generator
                 AgentMode.ORCHESTRATED: 7,
                 AgentMode.MULTI_AGENT: 7
             },
@@ -245,52 +372,11 @@ class RequirementsAnalyzer:
         
         return iteration_map.get(complexity, {}).get(agent_mode, 5)
     
-    def _generate_reasoning(self, complexity: ProjectComplexity, 
-                          features: List[str], agent_mode: AgentMode) -> List[str]:
-        """Generate human-readable reasoning for the decisions"""
-        reasoning = []
-        
-        # Complexity reasoning
-        if complexity == ProjectComplexity.SIMPLE:
-            reasoning.append("Project identified as simple (static site or landing page)")
-        elif complexity == ProjectComplexity.MODERATE:
-            reasoning.append("Project has moderate complexity with some dynamic features")
-        elif complexity == ProjectComplexity.COMPLEX:
-            reasoning.append("Project is complex with full-stack requirements")
-        elif complexity == ProjectComplexity.ENTERPRISE:
-            reasoning.append("Project has enterprise-level complexity")
-        
-        # Feature-based reasoning
-        if "authentication" in features:
-            reasoning.append("Authentication system detected - increases complexity")
-        if "database" in features:
-            reasoning.append("Database requirements detected")
-        if "api_endpoints" in features:
-            reasoning.append("API endpoints required")
-        if "external_integrations" in features:
-            reasoning.append("External service integrations needed")
-        if "payments" in features:
-            reasoning.append("Payment processing required")
-        if "realtime" in features:
-            reasoning.append("Real-time features detected")
-        
-        # Agent mode reasoning
-        if agent_mode == AgentMode.SINGLE:
-            reasoning.append("Using single agent for simple, focused generation")
-        elif agent_mode == AgentMode.ENHANCED:
-            reasoning.append("Using enhanced generator for improved quality")
-        elif agent_mode == AgentMode.ORCHESTRATED:
-            reasoning.append("Using orchestrated approach for complex coordination")
-        elif agent_mode == AgentMode.MULTI_AGENT:
-            reasoning.append("Using multi-agent system for comprehensive development")
-        
-        return reasoning
-    
     def _estimate_file_count(self, complexity: ProjectComplexity, features: List[str]) -> Dict[str, int]:
         """Estimate number of files that will be generated"""
         base_counts = {
             ProjectComplexity.SIMPLE: {"total": 5, "frontend": 5, "backend": 0, "config": 2},
-            ProjectComplexity.MODERATE: {"total": 15, "frontend": 8, "backend": 5, "config": 4},
+            ProjectComplexity.MODERATE: {"total": 20, "frontend": 10, "backend": 8, "config": 5},  # 🎯 NovaPLM
             ProjectComplexity.COMPLEX: {"total": 40, "frontend": 15, "backend": 20, "config": 8},
             ProjectComplexity.ENTERPRISE: {"total": 80, "frontend": 25, "backend": 45, "config": 15}
         }
@@ -311,12 +397,34 @@ class RequirementsAnalyzer:
         return {key: int(value * multiplier) for key, value in base.items()}
     
     def _estimate_duration(self, complexity: ProjectComplexity, agent_mode: AgentMode) -> str:
-        """Estimate generation duration"""
+        """
+        🔥 AGGIORNATO: Stime durata più accurate
+        """
         base_times = {
-            ProjectComplexity.SIMPLE: {"single": "1-2 min", "enhanced": "2-3 min", "orchestrated": "3-5 min", "multi_agent": "5-8 min"},
-            ProjectComplexity.MODERATE: {"single": "3-5 min", "enhanced": "5-8 min", "orchestrated": "8-12 min", "multi_agent": "12-18 min"},
-            ProjectComplexity.COMPLEX: {"single": "8-12 min", "enhanced": "12-18 min", "orchestrated": "18-25 min", "multi_agent": "25-35 min"},
-            ProjectComplexity.ENTERPRISE: {"single": "15-25 min", "enhanced": "25-35 min", "orchestrated": "35-50 min", "multi_agent": "50-80 min"}
+            ProjectComplexity.SIMPLE: {
+                "single": "1-2 min", 
+                "enhanced": "2-3 min", 
+                "orchestrated": "3-5 min", 
+                "multi_agent": "5-8 min"
+            },
+            ProjectComplexity.MODERATE: {
+                "single": "3-5 min", 
+                "enhanced": "3-8 min",  # 🎯 NovaPLM: tempo ottimale
+                "orchestrated": "8-12 min", 
+                "multi_agent": "12-18 min"
+            },
+            ProjectComplexity.COMPLEX: {
+                "single": "8-12 min", 
+                "enhanced": "12-18 min", 
+                "orchestrated": "18-25 min", 
+                "multi_agent": "25-35 min"
+            },
+            ProjectComplexity.ENTERPRISE: {
+                "single": "15-25 min", 
+                "enhanced": "25-35 min", 
+                "orchestrated": "35-50 min", 
+                "multi_agent": "50-80 min"
+            }
         }
         
         mode_key = agent_mode.value.replace("_", " ").replace("original", "single")
@@ -333,7 +441,7 @@ class RequirementsAnalyzer:
     
     def _get_routing_info(self, system_version: SystemVersion, agent_mode: AgentMode, v2_mode: str = None) -> Dict[str, Any]:
         """
-        🔥 NUOVO: Fornisce informazioni dettagliate sul routing
+        🔥 AGGIORNATO: Informazioni dettagliate sul routing
         """
         routing_info = {
             "system_version": system_version.value,
@@ -350,9 +458,9 @@ class RequirementsAnalyzer:
             })
         else:
             routing_info.update({
-                "service_class": "EnhancedV2Generator", 
+                "service_class": "EnhancedV2System", 
                 "method": self._get_v2_method(v2_mode),
-                "task_function": "process_enhanced_v2_generation"
+                "task_function": "process_enhanced_code_generation"
             })
         
         return routing_info
@@ -366,62 +474,57 @@ class RequirementsAnalyzer:
         }
         return method_mapping.get(v2_mode, "generate_default")
     
-    # Helper methods for feature detection
+    # Helper methods for feature detection (mantengo quelli esistenti)
     def _has_authentication(self, requirements: Dict[str, Any]) -> bool:
         """Check if project requires authentication"""
         # Check in features
         features = requirements.get("features", [])
         for feature in features:
-            if isinstance(feature, dict) and "authentication" in feature:
-                return True
+            if isinstance(feature, dict):
+                # Check for auth-related keys
+                auth_keys = ["authentication", "login", "auth", "user"]
+                if any(key in feature for key in auth_keys):
+                    return True
+                # Check nested content
+                for value in feature.values():
+                    if isinstance(value, (str, dict)) and any(key in str(value).lower() for key in auth_keys):
+                        return True
         
-        # Check in backend API structure
-        backend = requirements.get("backend", {})
-        api_structure = backend.get("api_structure", [])
-        for group in api_structure:
-            if isinstance(group, dict) and "authentication" in group:
-                return True
-        
-        # Check for protected pages
-        frontend = requirements.get("frontend", {})
-        pages = frontend.get("pages", [])
-        for page in pages:
-            if isinstance(page, dict) and page.get("protected", False):
+        # Check in security section
+        security = requirements.get("security", [])
+        for item in security:
+            if "authentication" in str(item).lower() or "jwt" in str(item).lower():
                 return True
         
         return False
     
     def _has_database(self, requirements: Dict[str, Any]) -> bool:
         """Check if project requires a database"""
-        # Check in features
+        # Check tech stack
+        tech_stack = requirements.get("tech_stack", {})
+        if "database" in tech_stack:
+            return True
+        
+        # Check database schema
+        if "database_schema" in requirements:
+            return True
+        
+        # Check features for data persistence
         features = requirements.get("features", [])
         for feature in features:
-            if isinstance(feature, dict) and "database" in feature:
-                return True
-        
-        # Check in backend
-        backend = requirements.get("backend", {})
-        if "database" in backend:
-            return True
-        
-        # Check for models
-        if "models" in backend:
-            return True
+            if isinstance(feature, dict):
+                # Look for database-related terms
+                db_terms = ["database", "storage", "persist", "save", "store"]
+                if any(term in str(feature).lower() for term in db_terms):
+                    return True
         
         return False
     
     def _has_api_endpoints(self, requirements: Dict[str, Any]) -> bool:
         """Check if project requires API endpoints"""
-        backend = requirements.get("backend", {})
-        
-        # Check for explicit API structure
-        if "api_structure" in backend:
-            api_structure = backend["api_structure"]
-            if isinstance(api_structure, list) and len(api_structure) > 0:
-                return True
-        
-        # Check for services that imply APIs
-        if "services" in backend:
+        # Check tech stack
+        tech_stack = requirements.get("tech_stack", {})
+        if "api" in tech_stack:
             return True
         
         # Check project type
@@ -429,203 +532,116 @@ class RequirementsAnalyzer:
         if project_type in ["fullstack", "backend"]:
             return True
         
+        # Check for backend presence
+        if "backend" in tech_stack:
+            return True
+        
         return False
     
     def _has_external_integrations(self, requirements: Dict[str, Any]) -> bool:
         """Check if project requires external service integrations"""
-        # Check for authentication providers other than email
+        # Check features for external services
         features = requirements.get("features", [])
+        external_terms = ["external", "api", "integration", "service", "third-party", "payment", "email"]
+        
         for feature in features:
-            if isinstance(feature, dict) and "authentication" in feature:
-                auth = feature["authentication"]
-                if isinstance(auth, dict) and "providers" in auth:
-                    providers = auth["providers"]
-                    if any(p not in ["email", "password"] for p in providers):
-                        return True
-        
-        # Check for external services
-        backend = requirements.get("backend", {})
-        services = backend.get("services", [])
-        external_services = ["EmailService", "PaymentService", "StorageService", "NotificationService"]
-        
-        for service in services:
-            if isinstance(service, dict):
-                for service_name in service.keys():
-                    if any(ext_service in service_name for ext_service in external_services):
-                        return True
-            elif isinstance(service, str) and any(ext_service in service for ext_service in external_services):
-                return True
+            if isinstance(feature, dict):
+                if any(term in str(feature).lower() for term in external_terms):
+                    return True
         
         return False
     
     def _has_realtime_features(self, requirements: Dict[str, Any]) -> bool:
         """Check if project requires real-time features"""
-        # Check in frontend
-        frontend = requirements.get("frontend", {})
-        if frontend.get("real_time", False) or frontend.get("websockets", False):
-            return True
-        
-        # Check in features
         features = requirements.get("features", [])
+        realtime_terms = ["real-time", "realtime", "websocket", "live", "instant"]
+        
         for feature in features:
             if isinstance(feature, dict):
-                if "real_time" in feature or "realtime" in feature or "websockets" in feature:
+                if any(term in str(feature).lower() for term in realtime_terms):
                     return True
         
         return False
     
     def _has_file_uploads(self, requirements: Dict[str, Any]) -> bool:
         """Check if project requires file upload functionality"""
-        # Check for storage services
-        backend = requirements.get("backend", {})
-        services = backend.get("services", [])
-        
-        for service in services:
-            if isinstance(service, dict):
-                for service_name in service.keys():
-                    if "Storage" in service_name or "File" in service_name:
-                        return True
-            elif isinstance(service, str) and ("storage" in service.lower() or "file" in service.lower()):
-                return True
-        
-        # Check in features
         features = requirements.get("features", [])
+        upload_terms = ["upload", "file", "image", "document", "media", "attachment"]
+        
         for feature in features:
             if isinstance(feature, dict):
-                for key in feature.keys():
-                    if "upload" in key.lower() or "file" in key.lower() or "media" in key.lower():
+                if any(term in str(feature).lower() for term in upload_terms):
+                    return True
+                    
+        # 🎯 SPECIAL: Check for "Gestione Documentazione" in NovaPLM
+        for feature in features:
+            if isinstance(feature, dict):
+                for key, value in feature.items():
+                    if "documentazione" in key.lower() or "upload" in str(value).lower():
                         return True
         
         return False
     
     def _has_payments(self, requirements: Dict[str, Any]) -> bool:
         """Check if project requires payment processing"""
-        # Check in services
-        backend = requirements.get("backend", {})
-        services = backend.get("services", [])
-        
-        for service in services:
-            if isinstance(service, dict):
-                for service_name in service.keys():
-                    if "Payment" in service_name or "payment" in service_name:
-                        return True
-            elif isinstance(service, str) and "payment" in service.lower():
-                return True
-        
-        # Check in features
         features = requirements.get("features", [])
+        payment_terms = ["payment", "billing", "subscription", "checkout", "purchase"]
+        
         for feature in features:
             if isinstance(feature, dict):
-                for key in feature.keys():
-                    if "payment" in key.lower() or "subscription" in key.lower() or "billing" in key.lower():
-                        return True
+                if any(term in str(feature).lower() for term in payment_terms):
+                    return True
         
         return False
     
     def _has_testing_requirements(self, requirements: Dict[str, Any]) -> bool:
         """Check if project has comprehensive testing requirements"""
-        testing = requirements.get("testing", {})
-        
-        # Check for explicit testing configuration
-        if testing:
-            # Count testing types
-            test_types = 0
-            if testing.get("backend", {}) or testing.get("frontend", {}):
-                test_types += 1
-            if testing.get("e2e_tests", False) or testing.get("integration_tests", False):
-                test_types += 1
-            if testing.get("performance_tests", False) or testing.get("load_testing", False):
-                test_types += 1
-            
-            return test_types >= 2
-        
-        return False
+        return "testing" in requirements and bool(requirements["testing"])
     
     def _has_complex_deployment(self, requirements: Dict[str, Any]) -> bool:
         """Check if project has complex deployment requirements"""
         deployment = requirements.get("deployment", {})
         
         # Check for containerization
-        if deployment.get("containerization", False):
-            return True
-        
-        # Check for orchestration
-        if "orchestration" in deployment or "kubernetes" in str(deployment).lower():
-            return True
-        
-        # Check for multiple environments
-        environments = deployment.get("environment", [])
-        if isinstance(environments, list) and len(environments) > 2:
-            return True
-        
-        # Check for microservices
-        backend = requirements.get("backend", {})
-        if backend.get("architecture") == "microservices":
+        if "docker" in str(deployment).lower() or "container" in str(deployment).lower():
             return True
         
         return False
     
     def _has_multiple_pages(self, requirements: Dict[str, Any]) -> bool:
         """Check if project has multiple pages/routes"""
-        frontend = requirements.get("frontend", {})
-        pages = frontend.get("pages", [])
-        
-        # Count pages
-        if isinstance(pages, list):
-            return len(pages) > 3
-        
-        # Check for routing in features
         features = requirements.get("features", [])
+        
+        # Count features that imply pages
+        page_features = 0
         for feature in features:
             if isinstance(feature, dict):
                 for key in feature.keys():
-                    if "routing" in key.lower() or "navigation" in key.lower():
-                        return True
+                    page_indicators = ["page", "dashboard", "login", "home", "gestione"]
+                    if any(indicator in key.lower() for indicator in page_indicators):
+                        page_features += 1
         
-        return False
+        return page_features > 2
     
     def _has_interactive_elements(self, requirements: Dict[str, Any]) -> bool:
         """Check if project has interactive elements"""
-        # Check for animations
-        design = requirements.get("design", {})
-        if design.get("animations", {}).get("enable", False):
-            return True
+        features = requirements.get("features", [])
+        interactive_terms = ["interactive", "animation", "dynamic", "form", "button", "workflow"]
         
-        # Check for interactive features
-        interactive = requirements.get("interactive_elements", [])
-        if interactive:
-            return True
-        
-        # Check frontend interactive elements
-        frontend_interactive = requirements.get("frontend_interactive_elements", [])
-        if frontend_interactive:
-            return True
+        for feature in features:
+            if isinstance(feature, dict):
+                if any(term in str(feature).lower() for term in interactive_terms):
+                    return True
         
         return False
     
     def _is_marketing_site(self, requirements: Dict[str, Any]) -> bool:
         """Check if this is primarily a marketing/landing site"""
-        # Check for SEO section
-        if "seo" in requirements:
-            return True
-        
-        # Check for marketing-specific features
-        features = requirements.get("features", [])
-        marketing_indicators = ["testimonials", "pricing", "hero_section", "cta_section"]
-        
-        for feature in features:
-            if isinstance(feature, dict):
-                for key in feature.keys():
-                    if any(indicator in key.lower() for indicator in marketing_indicators):
-                        return True
-        
-        # Check project description
         project = requirements.get("project", {})
         description = project.get("description", "").lower()
-        if any(word in description for word in ["landing", "marketing", "promotional", "showcase"]):
-            return True
         
-        return False
+        marketing_terms = ["landing", "marketing", "promotional", "showcase", "informativa"]
+        return any(term in description for term in marketing_terms)
     
     def _is_simple_project(self, requirements: Dict[str, Any], features: List[str]) -> bool:
         """Determine if project is simple"""
@@ -635,51 +651,36 @@ class RequirementsAnalyzer:
         if project_type in ["static", "landing-page", "static-landing-page"]:
             return True
         
-        # Marketing sites with minimal interactivity
-        if self._is_marketing_site(requirements) and len(features) <= 3:
-            return True
-        
-        # Frontend-only with no backend features
-        if project_type == "frontend" and not any(f in features for f in ["database", "api_endpoints", "authentication"]):
+        # Marketing sites with minimal features
+        if self._is_marketing_site(requirements) and len(features) <= 2:
             return True
         
         return False
     
     def _is_enterprise_project(self, requirements: Dict[str, Any], features: List[str]) -> bool:
         """Determine if project is enterprise-level"""
-        # Check for microservices
-        backend = requirements.get("backend", {})
-        if backend.get("architecture") == "microservices":
+        # High number of features
+        if len(features) >= 10:
             return True
         
-        # Check for multiple databases
-        if "multiple_databases" in features:
-            return True
-        
-        # Check for complex deployment
-        if "complex_deployment" in features:
-            return True
-        
-        # High number of features indicates enterprise complexity
-        if len(features) >= 8:
+        # Check for enterprise indicators
+        enterprise_features = ["complex_deployment", "external_integrations", "comprehensive_testing"]
+        if sum(1 for f in enterprise_features if f in features) >= 2:
             return True
         
         return False
     
     def _is_complex_project(self, requirements: Dict[str, Any], features: List[str]) -> bool:
         """Determine if project is complex"""
-        # Full-stack with multiple features
-        project_type = requirements.get("project", {}).get("type", "").lower()
-        if project_type == "fullstack" and len(features) >= 4:
+        # Check for complex indicators
+        if len(features) >= 7:
             return True
         
-        # Has database and authentication and more
-        required_features = ["database", "authentication", "api_endpoints"]
-        if all(f in features for f in required_features):
-            return True
+        # Has multiple advanced features
+        advanced_features = ["payments", "realtime", "external_integrations", "complex_deployment"]
+        advanced_count = sum(1 for f in advanced_features if f in features)
         
-        # Has external integrations and multiple features
-        if "external_integrations" in features and len(features) >= 5:
+        if advanced_count >= 2:
             return True
         
         return False

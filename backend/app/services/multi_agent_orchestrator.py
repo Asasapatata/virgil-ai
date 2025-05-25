@@ -12,6 +12,9 @@ from app.services.test_agent import TestAgent
 from app.services.agent_system import SystemAgent
 from app.services.agent_integration import IntegrationAgent
 from app.services.endpoints_agent import EndpointsAgent
+from app.services.enhanced_test_agent import EnhancedTestAgent
+from app.services.iteration_manager import IterationManager, IterationStructure
+
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +34,11 @@ class MultiAgentOrchestrator:
         self.integration_agent = IntegrationAgent(llm_service)
         self.endpoints_agent = EndpointsAgent(llm_service)
         
+        self.enhanced_test_agent = EnhancedTestAgent(llm_service)
+        self.iteration_manager = IterationManager()
+        
         self.stop_requested = False
-        logger.info("MultiAgentOrchestrator initialized")
+        logger.info("MultiAgentOrchestrator initialized with Enhanced V2 support")
     
     async def analyze_requirements(self, 
                                  requirements: Dict[str, Any], 
@@ -52,268 +58,280 @@ class MultiAgentOrchestrator:
                                             project_path: Path,
                                             progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
         """
-        Genera un'applicazione completa utilizzando tutti gli agenti specializzati in modo collaborativo.
+        🔥 AGGIORNATO: Usa struttura Enhanced V2
         """
         stop_file = project_path / "STOP_REQUESTED"
         if stop_file.exists():
             logger.info(f"Stop file found for project {project_path.name}, stopping generation")
             return {"status": "stopped", "reason": "user_requested"}
         
-        logger.info(f"Starting multi-agent orchestrated generation with {max_iterations} max iterations")
+        logger.info(f"Starting enhanced multi-agent generation with {max_iterations} max iterations")
         
-        # Crea metadati del progetto aggiornati
-        metadata_path = project_path / "multi_agent_metadata.json"
-        metadata = {}
-        if metadata_path.exists():
-            with open(metadata_path, 'r') as f:
-                metadata = json.load(f)
+        # Extract project name
+        project_name = requirements.get("project", {}).get("name", project_path.name)
+        if not project_name or project_name == project_path.name:
+            project_name = f"project_{project_path.name}"
         
-        # 1. Analizza i requisiti e crea un piano del progetto
-        if "analysis" not in metadata:
-            if progress_callback:
-                progress_callback(0, 'analyzing_requirements')
-            
-            analysis = await self.analyze_requirements(requirements, provider)
-            metadata["analysis"] = analysis
-            
-            # Salva i metadati
-            with open(metadata_path, 'w') as f:
-                json.dump(metadata, f, indent=2)
-            
-            logger.info("Requirements analysis completed and saved")
-        else:
-            analysis = metadata["analysis"]
-            logger.info("Using existing requirements analysis")
+        # Track project state
+        project_state = {
+            "iterations_completed": 0,
+            "total_errors_fixed": 0,
+            "remaining_issues": [],
+            "final_success": False,
+            "generation_mode": "multi_agent_enhanced_v2"
+        }
         
-        # 2. Genera file di sistema e configurazione
-        if "system_files_generated" not in metadata or not metadata["system_files_generated"]:
-            if progress_callback:
-                progress_callback(0, 'generating_system_files')
-            
-            system_files = await self.system_agent.generate_system_files(requirements, provider)
-            
-            # Salva i file generati
-            iter_path = project_path / "iter-1"
-            iter_path.mkdir(exist_ok=True)
-            self._save_code_files(iter_path, system_files)
-            
-            # Aggiorna i metadati
-            metadata["system_files_generated"] = True
-            metadata["system_files_count"] = len(system_files)
-            with open(metadata_path, 'w') as f:
-                json.dump(metadata, f, indent=2)
-            
-            logger.info(f"Generated {len(system_files)} system files")
+        # 🔥 FASE 1: Analisi requirements con sistema V2
+        if progress_callback:
+            progress_callback(0, 'analyzing_requirements_v2')
         
-        # Controlla se è stata richiesta l'interruzione
-        if stop_file.exists() or self.stop_requested:
-            logger.info("Stop requested, interrupting generation")
-            return {
-                "status": "stopped",
-                "reason": "user_requested",
-                "project_id": project_path.name
-            }
-            
-        # 3. Genera integrazioni con servizi esterni se necessario
-        if "integration_files_generated" not in metadata or not metadata["integration_files_generated"]:
-            if progress_callback:
-                progress_callback(0, 'generating_integration_files')
-            
-            integration_files = await self.integration_agent.generate_integrations(requirements, provider)
-            
-            # Salva i file generati
-            iter_path = project_path / "iter-1"
-            iter_path.mkdir(exist_ok=True)
-            self._save_code_files(iter_path, integration_files)
-            
-            # Aggiorna i metadati
-            metadata["integration_files_generated"] = True
-            metadata["integration_files_count"] = len(integration_files)
-            with open(metadata_path, 'w') as f:
-                json.dump(metadata, f, indent=2)
-            
-            logger.info(f"Generated {len(integration_files)} integration files")
-            
-        # Controlla se è stata richiesta l'interruzione
-        if stop_file.exists() or self.stop_requested:
-            logger.info("Stop requested, interrupting generation")
-            return {
-                "status": "stopped",
-                "reason": "user_requested",
-                "project_id": project_path.name
-            }
+        analysis = await self.analyze_requirements(requirements, provider)
         
-        # 4. Genera gli endpoint API se necessario
-        if "endpoint_files_generated" not in metadata or not metadata["endpoint_files_generated"]:
-            if progress_callback:
-                progress_callback(0, 'generating_endpoint_files')
+        # Main iteration loop con Enhanced V2
+        for iteration in range(1, max_iterations + 1):
+            logger.info(f"Starting enhanced iteration {iteration} for project {project_name}")
             
-            endpoint_files = await self.endpoints_agent.generate_endpoints(requirements, provider)
-            
-            # Salva i file generati
-            iter_path = project_path / "iter-1"
-            iter_path.mkdir(exist_ok=True)
-            self._save_code_files(iter_path, endpoint_files)
-            
-            # Aggiorna i metadati
-            metadata["endpoint_files_generated"] = True
-            metadata["endpoint_files_count"] = len(endpoint_files)
-            with open(metadata_path, 'w') as f:
-                json.dump(metadata, f, indent=2)
-            
-            logger.info(f"Generated {len(endpoint_files)} endpoint files")
-            
-        # Controlla se è stata richiesta l'interruzione
-        if stop_file.exists() or self.stop_requested:
-            logger.info("Stop requested, interrupting generation")
-            return {
-                "status": "stopped",
-                "reason": "user_requested",
-                "project_id": project_path.name
-            }
-        
-        # 5. Procedi con le iterazioni di generazione e test
-        start_iteration = metadata.get("current_iteration", 0)
-        
-        for iteration in range(start_iteration, max_iterations):
-            iteration_number = iteration + 1  # 1-based per display
-            logger.info(f"Starting iteration {iteration_number}/{max_iterations}")
-            
-            # Controlla per stop request
+            # Check for stop request
             if stop_file.exists() or self.stop_requested:
                 logger.info("Stop requested, interrupting generation")
                 return {
                     "status": "stopped",
                     "reason": "user_requested",
-                    "iteration": iteration,
-                    "project_id": project_path.name
+                    "iteration": iteration - 1,
+                    "project_id": project_path.name,
+                    "project_state": project_state
                 }
             
-            # Aggiorna i metadati
-            metadata["current_iteration"] = iteration
-            with open(metadata_path, 'w') as f:
-                json.dump(metadata, f, indent=2)
-            
-            # Aggiorna l'iterazione corrente in project.json
-            self._update_current_iteration(project_path, iteration_number)
-            
-            # Crea la directory dell'iterazione
-            iter_path = project_path / f"iter-{iteration_number}"
-            iter_path.mkdir(exist_ok=True)
-            
-            # Genera il codice per questa iterazione
-            if progress_callback:
-                progress_callback(iteration_number, 'generating_code')
-            
             try:
-                # Per la prima iterazione o se richiesto, genera il codice completo
-                if iteration == 0:
-                    # Carica i file già generati (sistema, integrazioni, endpoint)
-                    existing_files = self._load_existing_files(project_path / "iter-1")
-                    
-                    # Genera codice aggiuntivo
-                    additional_code = await self._generate_core_application_code(
-                        requirements, provider, existing_files
-                    )
-                    
-                    # Unisci con i file esistenti
-                    all_files = dict(existing_files)
-                    all_files.update(additional_code)
-                    
-                    # Salva tutti i file
-                    self._save_code_files(iter_path, all_files)
-                else:
-                    # Carica i file dell'iterazione precedente
-                    prev_iter_path = project_path / f"iter-{iteration}"
-                    prev_files = self._load_existing_files(prev_iter_path)
-                    
-                    # Controlla se ci sono risultati di test dall'iterazione precedente
-                    test_results_path = prev_iter_path / "test_results.json"
-                    
-                    if test_results_path.exists():
-                        # Leggi i risultati dei test
-                        with open(test_results_path, 'r') as f:
-                            prev_results = json.load(f)
-                        
-                        # Analizza i fallimenti
-                        failures = self.test_agent.test_runner.analyze_test_failures(prev_results)
-                        
-                        # Genera codice migliorato
-                        improved_code = await self._regenerate_code_with_fixes(
-                            requirements, provider, failures, iteration_number, prev_files
-                        )
-                        
-                        # Salva il codice
-                        self._save_code_files(iter_path, improved_code)
-                    else:
-                        # Se non ci sono risultati di test, copia i file dall'iterazione precedente
-                        import shutil
-                        for file_path in prev_iter_path.glob("**/*"):
-                            if file_path.is_file() and file_path.name != "test_results.json":
-                                target_path = iter_path / file_path.relative_to(prev_iter_path)
-                                target_path.parent.mkdir(parents=True, exist_ok=True)
-                                shutil.copy2(file_path, target_path)
+                # Update current iteration
+                self._update_current_iteration(project_path, iteration)
                 
-                # Genera test
-                if progress_callback:
-                    progress_callback(iteration_number, 'generating_tests')
-                
-                # Carica i file attuali
-                current_files = self._load_existing_files(iter_path)
-                
-                # Genera test per questi file
-                test_files = await self.test_agent.test_generator.generate_tests(
-                    requirements, current_files, provider
+                # 🔥 STEP 1: Create Enhanced V2 iteration structure
+                iteration_structure = self.iteration_manager.create_iteration_structure(
+                    project_path, project_name, iteration
                 )
                 
-                # Esegui i test
+                # 🔥 STEP 2: Generate code with multi-agent coordination
                 if progress_callback:
-                    progress_callback(iteration_number, 'running_tests')
+                    progress_callback(iteration, 'generating_multi_agent_code')
                 
-                test_results = await self.test_agent.test_runner.run_tests(iter_path, test_files)
+                code_files = await self._generate_multi_agent_code_v2(
+                    requirements, provider, iteration, project_path, project_name, analysis
+                )
                 
-                # Salva i risultati dei test
-                with open(iter_path / "test_results.json", 'w') as f:
-                    json.dump(test_results, f, indent=2)
+                # 🔥 STEP 3: Save in Enhanced V2 structure
+                files_generated, files_modified = self.iteration_manager.save_generated_code(
+                    iteration_structure, code_files
+                )
                 
-                # Controlla se tutti i test passano
-                if test_results.get("success", False):
-                    logger.info(f"All tests passed in iteration {iteration_number}")
-                    
-                    # Prepara il progetto finale
-                    self._prepare_final_project(project_path, iteration_number)
+                logger.info(f"Multi-Agent Iteration {iteration}: Generated {files_generated} files, modified {files_modified}")
+                
+                # 🔥 STEP 4: Enhanced V2 validation and testing
+                if progress_callback:
+                    progress_callback(iteration, 'enhanced_v2_validation')
+                
+                iteration_result = await self.enhanced_test_agent.process_iteration_complete(
+                    iteration_structure, project_name, iteration, requirements, code_files, provider
+                )
+                
+                # Update project state
+                project_state["iterations_completed"] = iteration
+                project_state["remaining_issues"] = iteration_result.get("errors_for_fixing", [])
+                
+                # Check success
+                if iteration_result["success"]:
+                    logger.info(f"Multi-Agent iteration {iteration} completed successfully!")
+                    project_state["final_success"] = True
                     
                     return {
                         "status": "completed",
-                        "iteration": iteration_number,
+                        "iteration": iteration,
                         "project_id": project_path.name,
-                        "output_path": str(iter_path),
-                        "analysis": analysis
+                        "project_name": project_name,
+                        "output_path": str(iteration_structure.iteration_path),
+                        "project_state": project_state,
+                        "final_result": iteration_result,
+                        "generation_strategy": "multi_agent_enhanced_v2"
                     }
                 
-            except Exception as e:
-                logger.error(f"Error in iteration {iteration_number}: {str(e)}")
-                import traceback
-                logger.error(traceback.format_exc())
+                # Continue to next iteration
+                logger.info(f"Multi-Agent iteration {iteration} had issues, continuing...")
                 
-                if iteration_number == max_iterations:
-                    raise
+            except Exception as e:
+                logger.error(f"Error in multi-agent iteration {iteration}: {str(e)}")
+                if iteration == max_iterations:
+                    return {
+                        "status": "failed",
+                        "reason": "iteration_error",
+                        "error": str(e),
+                        "iteration": iteration,
+                        "project_id": project_path.name,
+                        "project_state": project_state
+                    }
+                continue
         
-        # Se abbiamo raggiunto questo punto, significa che abbiamo completato tutte le iterazioni
-        # ma i test non hanno avuto successo
-        logger.warning(f"Max iterations ({max_iterations}) reached without success")
-        
-        # Prepara comunque il progetto finale
-        self._prepare_final_project(project_path, max_iterations)
-        
+        # Max iterations reached
         return {
-            "status": "completed_with_warnings",
-            "message": "Max iterations reached without passing all tests",
-            "iteration": max_iterations,
+            "status": "completed_with_issues",
+            "reason": "max_iterations_reached",
+            "iterations": max_iterations,
             "project_id": project_path.name,
-            "output_path": str(project_path / f"iter-{max_iterations}"),
-            "analysis": analysis
+            "project_name": project_name,
+            "project_state": project_state,
+            "generation_strategy": "multi_agent_enhanced_v2"
         }
+    
+    async def _generate_multi_agent_code_v2(self,
+                                        requirements: Dict[str, Any],
+                                        provider: str,
+                                        iteration: int,
+                                        project_path: Path,
+                                        project_name: str,
+                                        analysis: Dict[str, Any]) -> Dict[str, str]:
+        """
+        🔥 NUOVO: Genera codice con coordinazione multi-agent in Enhanced V2
+        """
+        logger.info(f"Generating multi-agent coordinated code for iteration {iteration}")
+        
+        if iteration == 1:
+            # Prima iterazione: coordinazione completa
+            all_files = {}
+            
+            # 1. Sistema e configurazione
+            system_files = await self.system_agent.generate_system_files(requirements, provider)
+            all_files.update(system_files)
+            
+            # 2. Integrazioni
+            integration_files = await self.integration_agent.generate_integrations(requirements, provider)
+            all_files.update(integration_files)
+            
+            # 3. API Endpoints
+            endpoint_files = await self.endpoints_agent.generate_endpoints(requirements, provider)
+            all_files.update(endpoint_files)
+            
+            # 4. Core application
+            core_files = await self._generate_core_application_code(requirements, provider, all_files)
+            all_files.update(core_files)
+            
+            return all_files
+        
+        else:
+            # Iterazioni successive: carica e migliora
+            previous_files = self.iteration_manager.load_previous_iteration_files(
+                project_path, project_name, iteration
+            )
+            
+            # Carica errori precedenti
+            previous_errors = self._load_previous_iteration_errors_v2(project_path, iteration - 1)
+            
+            if previous_errors:
+                # Multi-agent fixing
+                improved_files = await self._multi_agent_fix_issues(
+                    requirements, provider, previous_errors, previous_files
+                )
+                return improved_files
+            else:
+                # Multi-agent enhancement
+                enhanced_files = await self._multi_agent_enhance_quality(
+                    requirements, provider, previous_files, iteration
+                )
+                return enhanced_files
+
+    async def _multi_agent_fix_issues(self,
+                                    requirements: Dict[str, Any],
+                                    provider: str,
+                                    errors: List[Dict[str, Any]],
+                                    existing_files: Dict[str, str]) -> Dict[str, str]:
+        """
+        🔥 NUOVO: Multi-agent coordinated issue fixing
+        """
+        logger.info("Multi-agent coordinated issue fixing")
+        
+        # Dividi errori per tipo/agente
+        system_errors = [e for e in errors if e.get("category") in ["config", "setup", "environment"]]
+        integration_errors = [e for e in errors if e.get("category") in ["external", "api", "service"]]
+        endpoint_errors = [e for e in errors if e.get("category") in ["route", "controller", "endpoint"]]
+        general_errors = [e for e in errors if e not in system_errors + integration_errors + endpoint_errors]
+        
+        fixed_files = dict(existing_files)
+        
+        # Fix in parallelo con agenti specializzati
+        tasks = []
+        
+        if system_errors:
+            tasks.append(self.system_agent.fix_system_issues(system_errors, fixed_files, provider))
+        
+        if integration_errors:
+            tasks.append(self.integration_agent.fix_integration_issues(integration_errors, fixed_files, provider))
+        
+        if endpoint_errors:
+            tasks.append(self.endpoints_agent.fix_endpoint_issues(endpoint_errors, fixed_files, provider))
+        
+        if general_errors:
+            tasks.append(self.code_generator.generate_iterative_improvement(
+                requirements, provider, 2, general_errors, fixed_files
+            ))
+        
+        # Esegui tutti i fix in parallelo
+        if tasks:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Merge results
+            for result in results:
+                if isinstance(result, dict):
+                    fixed_files.update(result)
+        
+        return fixed_files
+
+    def _load_previous_iteration_errors_v2(self, project_path: Path, previous_iteration: int) -> List[Dict[str, Any]]:
+        """
+        🔥 NUOVO: Carica errori da Enhanced V2 structure
+        """
+        errors = []
+        prev_iter_path = project_path / f"iter-{previous_iteration}"
+        
+        if not prev_iter_path.exists():
+            return errors
+        
+        # Load from Enhanced V2 iteration summary
+        summary_path = prev_iter_path / "iteration_summary.json"
+        if summary_path.exists():
+            try:
+                with open(summary_path, 'r') as f:
+                    summary = json.load(f)
+                
+                # Extract from validation report
+                if "validation_report" in summary:
+                    validation = summary["validation_report"]
+                    for issue in validation.get("issues", []):
+                        if issue.get("severity") == "error":
+                            errors.append({
+                                "type": "validation",
+                                "category": issue.get("issue_type", "unknown"),
+                                "file": issue.get("file_path"),
+                                "line": issue.get("line_number"),
+                                "message": issue.get("message", ""),
+                                "suggestion": issue.get("suggestion", ""),
+                                "priority": "high"
+                            })
+                
+                # Extract from compilation report
+                if "compilation_report" in summary:
+                    compilation = summary["compilation_report"]
+                    for error in compilation.get("errors", []):
+                        errors.append({
+                            "type": "compilation",
+                            "category": error.get("error_type", "unknown"),
+                            "file": error.get("file_path"),
+                            "line": error.get("line_number"),
+                            "message": error.get("message", ""),
+                            "priority": "high"
+                        })
+            
+            except Exception as e:
+                logger.warning(f"Could not load Enhanced V2 iteration summary: {e}")
+        
+        return errors
     
     async def _generate_core_application_code(self, 
                                            requirements: Dict[str, Any], 
