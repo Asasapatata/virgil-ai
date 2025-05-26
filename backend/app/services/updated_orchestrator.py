@@ -308,22 +308,27 @@ class UpdatedOrchestratorAgent:
             generation_mode="enhanced_single"
         )
     
+    # Modifiche da applicare al tuo updated_orchestrator.py esistente
+
+# 1. SOSTITUISCI il metodo _generate_code_for_iteration() con questo:
+
     async def _generate_code_for_iteration(self, 
-                                         requirements: Dict[str, Any],
-                                         provider: str,
-                                         iteration: int,
-                                         project_path: Path,
-                                         project_name: str) -> Dict[str, str]:
+                                        requirements: Dict[str, Any],
+                                        provider: str,
+                                        iteration: int,
+                                        project_path: Path,
+                                        project_name: str) -> Dict[str, str]:
         """
-        Generate code for a specific iteration
-        
-        🔥 AGGIORNATO: Supporta Enhanced Generator per fixing intelligente
+        🔥 ENHANCED: Generate code for a specific iteration with structured output
         """
-        logger.info(f"Generating code for iteration {iteration}")
+        logger.info(f"Generating structured code for iteration {iteration}")
         
         if iteration == 1:
-            # First iteration: generate from requirements
-            code_files = await self._generate_initial_code(requirements, provider)
+            # First iteration: generate from requirements with structure
+            raw_code_files = await self._generate_initial_code_structured(requirements, provider)
+            
+            # Apply structured organization
+            return await self._apply_structured_organization_updated(raw_code_files, requirements, project_name)
         else:
             # Subsequent iterations: load previous iteration and fix errors
             previous_files = self.iteration_manager.load_previous_iteration_files(
@@ -336,11 +341,11 @@ class UpdatedOrchestratorAgent:
             if previous_errors:
                 logger.info(f"Found {len(previous_errors)} errors from previous iteration")
                 
-                # 🔥 NUOVO: Usa Enhanced Generator per fixing se disponibile
+                # 🔥 Enhanced Generator fixing if available
                 if self.has_enhanced_generator and len(previous_errors) > 0:
                     logger.info("Using Enhanced Generator for intelligent error fixing")
                     try:
-                        code_files = await self.enhanced_code_generator.fix_issues_enhanced(
+                        fixed_files = await self.enhanced_code_generator.fix_issues_enhanced(
                             code_files=previous_files,
                             issues=previous_errors,
                             provider=provider,
@@ -351,44 +356,599 @@ class UpdatedOrchestratorAgent:
                             }
                         )
                         logger.info("Enhanced Generator fixed issues successfully")
+                        
+                        # Apply structured organization to fixed files
+                        return await self._apply_structured_organization_updated(fixed_files, requirements, project_name)
+                        
                     except Exception as e:
                         logger.warning(f"Enhanced Generator fixing failed: {e}, falling back to standard fixing")
-                        code_files = await self._generate_code_with_fixes(
-                            requirements, provider, previous_errors, previous_files, iteration
-                        )
-                else:
-                    # Fallback al metodo standard
-                    code_files = await self._generate_code_with_fixes(
-                        requirements, provider, previous_errors, previous_files, iteration
-                    )
+                        
+                # Fallback to standard fixing
+                fixed_files = await self._generate_code_with_fixes_structured(
+                    requirements, provider, previous_errors, previous_files, iteration
+                )
+                
+                # Apply structured organization
+                return await self._apply_structured_organization_updated(fixed_files, requirements, project_name)
             else:
                 logger.info("No previous errors found, generating improved code")
                 
-                # 🔥 NUOVO: Usa Enhanced Generator per miglioramenti se disponibile
+                # Enhanced Generator for improvements if available
                 if self.has_enhanced_generator:
                     logger.info("Using Enhanced Generator for code quality improvements")
                     try:
-                        # Determina focus areas per miglioramento
                         focus_areas = self._determine_improvement_focus(requirements, iteration)
                         
-                        code_files = await self.enhanced_code_generator.enhance_code_quality(
+                        improved_files = await self.enhanced_code_generator.enhance_code_quality(
                             code_files=previous_files,
                             quality_focus=focus_areas,
                             provider=provider
                         )
                         logger.info(f"Enhanced Generator improved code with focus: {', '.join(focus_areas)}")
+                        
+                        # Apply structured organization
+                        return await self._apply_structured_organization_updated(improved_files, requirements, project_name)
+                        
                     except Exception as e:
                         logger.warning(f"Enhanced Generator improvement failed: {e}, falling back to standard")
-                        code_files = await self._generate_improved_code(
-                            requirements, provider, previous_files, iteration
-                        )
-                else:
-                    code_files = await self._generate_improved_code(
-                        requirements, provider, previous_files, iteration
-                    )
+                
+                # Standard improvement
+                improved_files = await self._generate_improved_code(
+                    requirements, provider, previous_files, iteration
+                )
+                
+                # Apply structured organization
+                return await self._apply_structured_organization_updated(improved_files, requirements, project_name)
+
+    # 2. AGGIUNGI questi metodi specifici per updated_orchestrator:
+
+    async def _generate_initial_code_structured(self, 
+                                            requirements: Dict[str, Any], 
+                                            provider: str) -> Dict[str, str]:
+        """Generate initial code for first iteration with enhanced structure support"""
+        project_type = requirements.get("project", {}).get("type", "fullstack")
         
-        return code_files
-    
+        # Use enhanced generator if available
+        if self.has_enhanced_generator:
+            logger.info("Using Enhanced Generator for initial code generation")
+            try:
+                enhanced_result = await self.enhanced_code_generator.generate_complete_project_enhanced(
+                    requirements=requirements,
+                    provider=provider,
+                    max_iterations=1
+                )
+                
+                if enhanced_result["success"]:
+                    return enhanced_result["code_files"]
+            except Exception as e:
+                logger.warning(f"Enhanced Generator failed for initial generation: {e}")
+        
+        # Fallback to standard generation
+        if project_type == "frontend":
+            return await self.code_generator.generate_react_app(requirements, provider)
+        elif project_type == "backend":
+            return await self.code_generator.generate_backend_api(requirements, provider)
+        else:
+            # Fullstack or mixed
+            return await self.code_generator.generate_code(requirements, provider, 1)
+
+    async def _generate_code_with_fixes_structured(self,
+                                                requirements: Dict[str, Any],
+                                                provider: str,
+                                                errors: List[Dict[str, Any]],
+                                                existing_files: Dict[str, str],
+                                                iteration: int) -> Dict[str, str]:
+        """Generate code with specific fixes for errors - structured version"""
+        logger.info(f"Generating structured code with fixes for {len(errors)} errors")
+        
+        # Create enhanced system prompt with error context and structure awareness
+        system_prompt = f"""You are an expert software engineer fixing code issues in iteration {iteration}.
+        
+        CRITICAL: You must fix the following specific errors while maintaining all existing functionality:
+        
+        {self._format_errors_for_prompt(errors)}
+        
+        STRUCTURE REQUIREMENTS:
+        - Backend files should be organized in backend/ directory
+        - Frontend files should be organized in frontend/ directory  
+        - Maintain clean separation between backend and frontend code
+        - Ensure all import paths are correct for the new structure
+        
+        Focus on:
+        1. Fixing compilation errors (highest priority)
+        2. Resolving import and dependency issues with correct paths
+        3. Correcting syntax errors
+        4. Maintaining existing working code
+        5. Ensuring proper file organization
+        
+        Make minimal changes to fix the issues. Do not rewrite working code.
+        """
+        
+        # Create focused prompt for fixing specific issues
+        prompt = self._create_error_fixing_prompt_structured(requirements, errors, existing_files, iteration)
+        
+        # Generate fixed code
+        response = await self.llm_service.generate(
+            provider=provider,
+            prompt=prompt,
+            system_prompt=system_prompt
+        )
+        
+        # Extract and merge with existing files
+        fixed_files = self._extract_files(response)
+        
+        # Merge with existing files (prioritize fixes)
+        merged_files = dict(existing_files) if existing_files else {}
+        merged_files.update(fixed_files)
+        
+        return merged_files
+
+    def _create_error_fixing_prompt_structured(self,
+                                            requirements: Dict[str, Any],
+                                            errors: List[Dict[str, Any]],
+                                            existing_files: Dict[str, str],
+                                            iteration: int) -> str:
+        """Create a focused prompt for fixing specific errors with structure awareness"""
+        
+        # Group errors by file for focused fixing
+        errors_by_file = {}
+        for error in errors:
+            file_path = error.get('file', 'unknown')
+            if file_path not in errors_by_file:
+                errors_by_file[file_path] = []
+            errors_by_file[file_path].append(error)
+        
+        # Create file context section with structure awareness
+        file_context = ""
+        for file_path, file_errors in errors_by_file.items():
+            if file_path != 'unknown' and file_path in existing_files:
+                content = existing_files[file_path]
+                # Truncate very large files
+                if len(content) > 2000:
+                    content = content[:1000] + "\n... [content truncated] ...\n" + content[-1000:]
+                
+                file_context += f"\n## File: {file_path}\n"
+                file_context += f"Errors in this file:\n"
+                for error in file_errors:
+                    file_context += f"- Line {error.get('line', '?')}: {error.get('message', '')}\n"
+                file_context += f"\nCurrent content:\n```\n{content}\n```\n"
+        
+        return f"""# Structured Code Fixing Task - Iteration {iteration}
+
+    ## Project Requirements
+    {json.dumps(requirements, indent=2)}
+
+    ## Target Structure
+    - Backend files: backend/ directory
+    - Frontend files: frontend/ directory
+    - Clean separation and proper import paths
+
+    ## Errors to Fix
+    {self._format_errors_for_prompt(errors)}
+
+    ## Files Requiring Changes
+    {file_context}
+
+    ## Instructions
+    1. Fix ONLY the reported errors
+    2. Maintain all existing functionality
+    3. Make minimal changes
+    4. Ensure all imports and dependencies are correct for structured layout
+    5. Organize files properly (backend/ vs frontend/)
+    6. Test that fixes don't break other parts
+
+    ## Response Format
+    For each file that needs changes, provide the complete corrected content with proper structure:
+
+    FILE: proper/structured/path/to/file.ext
+    ```language
+    [complete corrected file content with proper imports]
+    ```
+
+    Focus on the most critical errors first (compilation, syntax, imports) and ensure proper file organization.
+    """
+
+    async def _apply_structured_organization_updated(self, 
+                                                raw_files: Dict[str, str], 
+                                                requirements: Dict[str, Any],
+                                                project_name: str) -> Dict[str, str]:
+        """
+        🔥 NEW: Apply structured organization specifically for updated_orchestrator
+        """
+        logger.info("Applying structured organization to generated files")
+        
+        # Clean project name
+        clean_project_name = self._clean_project_name_updated(
+            requirements.get("project_name", project_name)
+        )
+        
+        # Organize files into structure
+        structured_files = self._organize_files_into_structure_updated(
+            raw_files, clean_project_name, requirements
+        )
+        
+        # Create test environment
+        test_env_files = self._create_test_environment_updated(
+            structured_files, clean_project_name, requirements
+        )
+        structured_files.update(test_env_files)
+        
+        # Create support files
+        support_files = self._create_support_files_updated(requirements, clean_project_name)
+        structured_files.update(support_files)
+        
+        logger.info(f"Structured organization complete: {len(structured_files)} total files")
+        
+        return structured_files
+
+    def _clean_project_name_updated(self, project_name: str) -> str:
+        """Clean project name for updated orchestrator"""
+        import re
+        clean_name = re.sub(r'[^a-zA-Z0-9\-_]', '', str(project_name).lower())
+        if not clean_name:
+            clean_name = "generated-project"
+        return clean_name
+
+    def _organize_files_into_structure_updated(self, 
+                                            raw_files: Dict[str, str], 
+                                            clean_project_name: str,
+                                            requirements: Dict[str, Any]) -> Dict[str, str]:
+        """Organize files into project-xyz structure for updated orchestrator"""
+        structured_files = {}
+        project_prefix = f"project-{clean_project_name}"
+        
+        # Determine tech stack
+        tech_stack = requirements.get("tech_stack", {})
+        project_type = requirements.get("project", {}).get("type", "fullstack")
+        
+        has_backend = (tech_stack.get("backend") or 
+                    project_type in ["backend", "fullstack"] or 
+                    "backend" in str(requirements).lower())
+        has_frontend = (tech_stack.get("frontend") or 
+                        project_type in ["frontend", "fullstack"] or 
+                        "frontend" in str(requirements).lower())
+        
+        # Organize files by type
+        for file_path, content in raw_files.items():
+            # Skip already structured files
+            if file_path.startswith(project_prefix):
+                structured_files[file_path] = content
+                continue
+            
+            # Determine file placement
+            if self._is_backend_file_updated(file_path):
+                if has_backend:
+                    new_path = f"{project_prefix}/backend/{file_path}"
+                else:
+                    new_path = f"{project_prefix}/{file_path}"
+            elif self._is_frontend_file_updated(file_path):
+                if has_frontend:
+                    new_path = f"{project_prefix}/frontend/{file_path}"
+                else:
+                    new_path = f"{project_prefix}/{file_path}"
+            else:
+                # General files go to project root
+                new_path = f"{project_prefix}/{file_path}"
+            
+            structured_files[new_path] = content
+        
+        # Add project README
+        structured_files[f"{project_prefix}/README.md"] = self._generate_project_readme_updated(
+            requirements, clean_project_name
+        )
+        
+        return structured_files
+
+    def _is_backend_file_updated(self, file_path: str) -> bool:
+        """Determine if file is backend for updated orchestrator"""
+        backend_indicators = [
+            '.py', 'requirements.txt', 'app/', 'api/', 'models/', 'schemas/',
+            'database/', 'db/', 'migrations/', 'alembic/', 'fastapi', 'django',
+            'flask', 'main.py', 'wsgi.py', 'asgi.py', 'manage.py', 'celery',
+            '__pycache__/', '.pyc', 'pytest', 'test_', '_test.py'
+        ]
+        return any(indicator in file_path.lower() for indicator in backend_indicators)
+
+    def _is_frontend_file_updated(self, file_path: str) -> bool:
+        """Determine if file is frontend for updated orchestrator"""
+        frontend_indicators = [
+            '.tsx', '.jsx', '.ts', '.js', '.css', '.scss', '.html', '.vue',
+            'src/', 'public/', 'components/', 'pages/', 'styles/', 'assets/',
+            'package.json', 'node_modules/', 'build/', 'dist/', 'webpack',
+            'react', 'vue', 'angular', 'next', 'vite', 'tailwind'
+        ]
+        return any(indicator in file_path.lower() for indicator in frontend_indicators)
+
+    def _create_test_environment_updated(self, 
+                                    structured_files: Dict[str, str],
+                                    clean_project_name: str,
+                                    requirements: Dict[str, Any]) -> Dict[str, str]:
+        """Create test environment for updated orchestrator"""
+        test_env_files = {}
+        project_prefix = f"project-{clean_project_name}"
+        
+        # Copy all project files to env_test/
+        for file_path, content in structured_files.items():
+            if file_path.startswith(project_prefix):
+                # Remove project prefix for env_test copy
+                relative_path = file_path[len(project_prefix)+1:]
+                test_env_files[f"env_test/{relative_path}"] = content
+        
+        # Add Docker configuration
+        test_env_files["env_test/docker-compose.test.yml"] = self._generate_test_docker_compose_updated(requirements)
+        test_env_files["env_test/Dockerfile.backend"] = self._generate_backend_dockerfile_updated()
+        test_env_files["env_test/Dockerfile.frontend"] = self._generate_frontend_dockerfile_updated()
+        
+        # Add test scripts
+        test_env_files["env_test/run_tests.sh"] = self._generate_test_runner_script_updated()
+        test_env_files["env_test/test_runner.py"] = self._generate_python_test_runner_updated()
+        
+        return test_env_files
+
+    def _create_support_files_updated(self, requirements: Dict[str, Any], clean_project_name: str) -> Dict[str, str]:
+        """Create support files for updated orchestrator"""
+        support_files = {}
+        
+        # Main requirements.txt
+        support_files["requirements.txt"] = self._generate_project_requirements_updated(requirements)
+        
+        # Environment template
+        support_files[".env.template"] = self._generate_env_template_updated(requirements)
+        
+        # GitIgnore
+        support_files[".gitignore"] = '''# Dependencies
+    node_modules/
+    __pycache__/
+    *.pyc
+    venv/
+    env/
+    .venv/
+
+    # IDE
+    .vscode/
+    .idea/
+    *.swp
+    *.swo
+
+    # OS
+    .DS_Store
+    Thumbs.db
+    .directory
+
+    # Environment
+    .env
+    .env.local
+    .env.development.local
+    .env.test.local
+    .env.production.local
+
+    # Build outputs
+    build/
+    dist/
+    *.egg-info/
+    .eggs/
+
+    # Test outputs
+    .coverage
+    .pytest_cache/
+    test_report.txt
+    integration_test_results.json
+    htmlcov/
+
+    # Logs
+    *.log
+    logs/
+    npm-debug.log*
+    yarn-debug.log*
+    yarn-error.log*
+
+    # Runtime
+    .pid
+    .seed
+    .pid.lock
+    '''
+        
+        return support_files
+
+    def _generate_project_readme_updated(self, requirements: Dict[str, Any], clean_project_name: str) -> str:
+        """Generate README for updated orchestrator"""
+        project_name = requirements.get("project_name", clean_project_name.title())
+        description = requirements.get("description", "Generated by Enhanced Multi-Agent System")
+        project_type = requirements.get("project", {}).get("type", "fullstack")
+        
+        return f'''# {project_name}
+
+    {description}
+
+    **Project Type:** {project_type.title()}
+
+    ## 🚀 Quick Start
+
+    ### Using Docker (Recommended)
+
+    1. **Navigate to test environment:**
+    ```bash
+    cd ../env_test
+    ```
+
+    2. **Start all services:**
+    ```bash
+    docker-compose -f docker-compose.test.yml up -d
+    ```
+
+    3. **Run tests:**
+    ```bash
+    chmod +x run_tests.sh
+    ./run_tests.sh
+    ```
+
+    ## 📁 Project Structure
+
+    ```
+    {f"backend/          # Backend application" if project_type in ["backend", "fullstack"] else ""}
+    {f"frontend/         # Frontend application" if project_type in ["frontend", "fullstack"] else ""}
+    README.md         # This file
+    ```
+
+    ## 🧪 Testing
+
+    Tests are executed in the `../env_test` environment which contains:
+    - Complete copy of this project
+    - Docker configuration for all services
+    - Automated test runners
+    - Integration test suites
+
+    ## 💻 Development
+
+    This is the clean development version. For testing and deployment, always use the `../env_test` environment.
+
+    ## 🔧 Technology Stack
+
+    {self._format_tech_stack_for_readme(requirements)}
+
+    ---
+    *Generated by Enhanced Multi-Agent Orchestrator v2*
+    '''
+
+    def _format_tech_stack_for_readme(self, requirements: Dict[str, Any]) -> str:
+        """Format tech stack for README"""
+        tech_stack = requirements.get("tech_stack", {})
+        if not tech_stack:
+            return "- Technology stack not specified"
+        
+        formatted = []
+        for key, value in tech_stack.items():
+            if value:
+                formatted.append(f"- **{key.title()}:** {value}")
+        
+        return "\n".join(formatted) if formatted else "- Technology stack details not available"
+
+    # Helper methods for Docker and test generation (simplified versions)
+    def _generate_test_docker_compose_updated(self, requirements: Dict[str, Any]) -> str:
+        """Generate docker-compose for updated orchestrator"""
+        return '''version: '3.8'
+
+    services:
+    backend:
+        build:
+        context: .
+        dockerfile: Dockerfile.backend
+        ports:
+        - "8000:8000"
+        environment:
+        - PYTHONPATH=/app
+        - DATABASE_URL=postgresql://test:test@db:5432/test_db
+        networks:
+        - test-network
+
+    frontend:
+        build:
+        context: .
+        dockerfile: Dockerfile.frontend
+        ports:
+        - "3000:3000"
+        environment:
+        - REACT_APP_API_URL=http://backend:8000
+        networks:
+        - test-network
+
+    db:
+        image: postgres:15
+        environment:
+        - POSTGRES_DB=test_db
+        - POSTGRES_USER=test
+        - POSTGRES_PASSWORD=test
+        networks:
+        - test-network
+
+    networks:
+    test-network:
+        driver: bridge
+    '''
+
+    def _generate_backend_dockerfile_updated(self) -> str:
+        """Generate backend Dockerfile for updated orchestrator"""
+        return '''FROM python:3.11-slim
+    WORKDIR /app
+    COPY backend/requirements.txt ./requirements.txt
+    RUN pip install -r requirements.txt
+    COPY backend/ .
+    EXPOSE 8000
+    CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    '''
+
+    def _generate_frontend_dockerfile_updated(self) -> str:
+        """Generate frontend Dockerfile for updated orchestrator"""
+        return '''FROM node:18-alpine
+    WORKDIR /app
+    COPY frontend/package*.json ./
+    RUN npm ci
+    COPY frontend/ .
+    EXPOSE 3000
+    CMD ["npm", "start"]
+    '''
+
+    def _generate_test_runner_script_updated(self) -> str:
+        """Generate test runner script for updated orchestrator"""
+        return '''#!/bin/bash
+    set -e
+    echo "🧪 Starting enhanced test environment..."
+    docker-compose -f docker-compose.test.yml up -d
+    sleep 30
+    echo "🔧 Running tests..."
+    python test_runner.py
+    echo "✅ Tests completed!"
+    docker-compose -f docker-compose.test.yml down
+    '''
+
+    def _generate_python_test_runner_updated(self) -> str:
+        """Generate Python test runner for updated orchestrator"""
+        return '''#!/usr/bin/env python3
+    import requests
+    import json
+    import sys
+
+    def run_tests():
+        tests = [
+            ("Backend Health", lambda: requests.get("http://localhost:8000/health", timeout=10).status_code == 200),
+            ("Frontend Access", lambda: requests.get("http://localhost:3000", timeout=10).status_code == 200),
+        ]
+        
+        results = {}
+        for name, test in tests:
+            try:
+                results[name] = "PASS" if test() else "FAIL"
+            except:
+                results[name] = "FAIL"
+        
+        with open("test_results.json", "w") as f:
+            json.dump(results, f, indent=2)
+        
+        return all(r == "PASS" for r in results.values())
+
+    if __name__ == "__main__":
+        sys.exit(0 if run_tests() else 1)
+    '''
+
+    def _generate_project_requirements_updated(self, requirements: Dict[str, Any]) -> str:
+        """Generate requirements.txt for updated orchestrator"""
+        return '''fastapi>=0.104.0
+    uvicorn[standard]>=0.24.0
+    pydantic>=2.5.0
+    python-dotenv>=1.0.0
+    requests>=2.31.0
+    '''
+
+    def _generate_env_template_updated(self, requirements: Dict[str, Any]) -> str:
+        """Generate .env template for updated orchestrator"""
+        return '''# Environment Configuration
+    DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+    SECRET_KEY=your-secret-key-change-in-production
+    API_V1_STR=/api/v1
+    DEBUG=true
+    LOG_LEVEL=INFO
+    '''
+
     def _determine_improvement_focus(self, requirements: Dict[str, Any], iteration: int) -> List[str]:
         """
         🔥 NUOVO: Determina le aree di focus per il miglioramento del codice
