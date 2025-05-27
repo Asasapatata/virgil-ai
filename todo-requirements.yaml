@@ -1,0 +1,174 @@
+project:
+  name: "MOVE YOUR ASS Todo List"
+  description: "Single page application per gestione task motivante e allegra"
+  type: "Single Page Application"
+  
+requirements:
+  functional:
+    core_features:
+      - name: "Creazione Task"
+        description: "Possibilità di aggiungere nuovi task alla lista"
+        acceptance_criteria:
+          - "Input field per inserire il testo del task"
+          - "Bottone per aggiungere il task"
+          - "Validazione per evitare task vuoti"
+          - "Feedback visivo dopo l'aggiunta"
+      
+      - name: "Gestione Stati Task"
+        description: "Cambio stato dei task esistenti"
+        states:
+          - "Todo" # stato iniziale
+          - "In Progress" 
+          - "Completed"
+        acceptance_criteria:
+          - "Indicatori visivi chiari per ogni stato"
+          - "Possibilità di spostare task tra stati"
+          - "Animazioni di transizione tra stati"
+      
+      - name: "Eliminazione Task"
+        description: "Rimozione definitiva dei task"
+        acceptance_criteria:
+          - "Bottone elimina per ogni task"
+          - "Conferma prima dell'eliminazione"
+          - "Animazione di rimozione"
+      
+      - name: "Persistenza Dati"
+        description: "Salvataggio automatico in localStorage"
+        acceptance_criteria:
+          - "Auto-save ad ogni modifica"
+          - "Caricamento dati all'avvio"
+          - "Gestione errori localStorage"
+          - "Backup/recovery dei dati"
+
+  technical:
+    architecture:
+      - "Single Page Application (SPA)"
+      - "Vanilla JavaScript o framework moderno"
+      - "Responsive design"
+      - "Progressive Web App ready"
+    
+    storage:
+      - "localStorage del browser"
+      - "Struttura JSON per i dati"
+      - "Versioning schema dati"
+    
+    performance:
+      - "Caricamento < 2 secondi"
+      - "Transizioni fluide (60fps)"
+      - "Ottimizzazione mobile"
+
+  design:
+    theme:
+      name: "Motivational & Energetic"
+      mood: "Allegro, energico, motivante"
+      personality: "Divertente ma funzionale"
+    
+    visual_style:
+      colors:
+        primary: "Colori vivaci e energici (arancione, giallo, verde lime)"
+        secondary: "Colori complementari"
+        states:
+          todo: "Grigio chiaro o blu tenue"
+          in_progress: "Arancione o giallo"
+          completed: "Verde brillante"
+          danger: "Rosso per eliminazione"
+      
+      typography:
+        title: "Font bold e impattante per 'MOVE YOUR ASS'"
+        body: "Font leggibile e moderno"
+        emphasis: "Grassetto per elementi importanti"
+      
+      elements:
+        buttons:
+          - "Rounded corners"
+          - "Hover effects"
+          - "Colori contrastanti"
+          - "Icone intuitive"
+        
+        cards:
+          - "Box shadow leggera"
+          - "Bordi arrotondati"
+          - "Colori di sfondo per stati"
+        
+        animations:
+          - "Micro-interactions"
+          - "Slide in/out per task"
+          - "Bouncy effects sui bottoni"
+          - "Progress indicators animati"
+
+  user_experience:
+    interactions:
+      - name: "Aggiunta Task"
+        flow: "Input → Invio/Click → Animazione → Task appare"
+      
+      - name: "Cambio Stato"
+        flow: "Click stato → Animazione transizione → Nuovo stato"
+      
+      - name: "Eliminazione"
+        flow: "Click elimina → Conferma → Animazione out → Rimozione"
+    
+    feedback:
+      - "Messaggi motivazionali casuali"
+      - "Celebrazioni per task completati"
+      - "Counter task completati"
+      - "Streak counter (giorni consecutivi)"
+    
+    accessibility:
+      - "Keyboard navigation"
+      - "Screen reader friendly"
+      - "Alto contrasto opzionale"
+      - "Font size adjustable"
+
+  content:
+    title: "MOVE YOUR ASS"
+    motivational_messages:
+      - "Dai che ce la fai! 💪"
+      - "Un task alla volta! 🚀"
+      - "Sei una macchina! ⚡"
+      - "Keep going! 🔥"
+      - "Task completed = Victory! 🎉"
+    
+    placeholders:
+      - "Cosa devi fare oggi?"
+      - "Scrivi il tuo prossimo obiettivo..."
+      - "Che cosa vuoi conquistare?"
+      
+    empty_state:
+      message: "Nessun task? Tempo di MUOVERE IL SEDERE! 🍑"
+      cta: "Aggiungi il tuo primo task"
+
+  data_structure:
+    task:
+      id: "string (uuid)"
+      text: "string"
+      status: "enum (todo|in_progress|completed)"
+      created_at: "timestamp"
+      updated_at: "timestamp"
+      completed_at: "timestamp|null"
+    
+    app_state:
+      tasks: "array of task objects"
+      stats:
+        total_completed: "number"
+        streak_days: "number"
+        last_activity: "timestamp"
+      settings:
+        theme: "string"
+        notifications: "boolean"
+
+  browser_support:
+    - "Chrome 80+"
+    - "Firefox 75+"
+    - "Safari 13+"
+    - "Edge 80+"
+    - "Mobile browsers"
+
+  future_enhancements:
+    - "Dark/Light theme toggle"
+    - "Task categories/tags"
+    - "Due dates"
+    - "Task priorities"
+    - "Export/Import data"
+    - "PWA notifications"
+    - "Achievement system"
+    - "Data sync cloud (opzionale)"
