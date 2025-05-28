@@ -107,40 +107,135 @@ class IterationManager:
         logger.info(f"Created iteration structure at {iteration_path}")
         return structure
     
+    # Aggiungi metodo per auto-rilevare se usare struttura enhanced
     def save_generated_code(self, 
-                          structure: IterationStructure, 
-                          code_files: Dict[str, str],
-                          existing_files: Optional[Dict[str, str]] = None) -> Tuple[int, int]:
+                        iteration_structure: IterationStructure, 
+                        code_files: Dict[str, str],
+                        preserve_enhanced_structure: bool = True) -> Tuple[int, int]:
         """
-        Save generated code files to the iteration structure
-        Returns: (files_generated, files_modified)
+        🔥 ENHANCED: Salva codice rispettando la struttura di EnhancedCodeGenerator
         """
-        logger.info(f"Saving {len(code_files)} code files to iteration")
-        
         files_generated = 0
         files_modified = 0
         
+        if preserve_enhanced_structure and self._should_use_enhanced_structure(code_files):
+            return self._save_with_enhanced_structure(iteration_structure, code_files)
+        else:
+            return self._save_with_legacy_structure(iteration_structure, code_files)
+
+    def _should_use_enhanced_structure(self, code_files: Dict[str, str]) -> bool:
+        """
+        🤖 AUTO-DETECT: Rileva se i file seguono la struttura EnhancedCodeGenerator
+        """
+        enhanced_indicators = [
+            any(f.startswith("project-") for f in code_files),
+            any(f.startswith("env_test/") for f in code_files),
+            any("backend/" in f and "frontend/" in f for f in code_files.keys()),
+            "docker-compose.test.yml" in str(code_files)
+        ]
+        
+        return sum(enhanced_indicators) >= 2
+    
+    def _save_with_enhanced_structure(self, iteration_structure: IterationStructure, code_files: Dict[str, str]) -> Tuple[int, int]:
+        """Salva rispettando project-name/backend + frontend + env_test/"""
+    
+        """
+        🎯 NUOVO: Salva rispettando project-name/backend + frontend + env_test/
+        """
+        files_generated = 0
+        files_modified = 0
+        
+        # Categorizza i file per tipo
+        project_files = {}
+        test_env_files = {}
+        support_files = {}
+        
         for file_path, content in code_files.items():
-            # Determine full path in project structure
-            full_path = structure.project_path / file_path
+            if file_path.startswith("project-"):
+                # File del progetto principale: project-novaplm/backend/main.py
+                project_files[file_path] = content
+            elif file_path.startswith("env_test/"):
+                # File ambiente test: env_test/docker-compose.yml
+                test_env_files[file_path] = content
+            elif file_path in ["requirements.txt", ".gitignore", ".env.template"]:
+                # File di supporto root
+                support_files[file_path] = content
+            else:
+                # File generici vanno nel progetto
+                project_files[file_path] = content
+        
+        # Salva file del progetto principale
+        for file_path, content in project_files.items():
+            if file_path.startswith("project-"):
+                # Mantieni la struttura: iter-1/project-novaplm/backend/main.py
+                full_path = iteration_structure.iteration_path / file_path
+            else:
+                # File senza prefisso vanno in project_path
+                full_path = iteration_structure.project_path / file_path
+            
             full_path.parent.mkdir(parents=True, exist_ok=True)
             
-            # Check if file already exists
             if full_path.exists():
                 files_modified += 1
-                logger.debug(f"Modified: {file_path}")
             else:
                 files_generated += 1
-                logger.debug(f"Generated: {file_path}")
             
-            # Save file
             try:
                 with open(full_path, 'w', encoding='utf-8') as f:
                     f.write(content)
             except Exception as e:
                 logger.error(f"Error saving {file_path}: {e}")
         
-        logger.info(f"Saved code files: {files_generated} generated, {files_modified} modified")
+        # Salva ambiente test in directory separata
+        if test_env_files:
+            test_env_base = iteration_structure.iteration_path / "test_environment"
+            test_env_base.mkdir(exist_ok=True)
+            
+            for file_path, content in test_env_files.items():
+                # Rimuovi prefisso env_test/
+                relative_path = file_path[len("env_test/"):]
+                full_path = test_env_base / relative_path
+                full_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                with open(full_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                files_generated += 1
+        
+        # Salva file di supporto
+        if support_files:
+            for file_path, content in support_files.items():
+                full_path = iteration_structure.iteration_path / file_path
+                with open(full_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                files_generated += 1
+        
+        logger.info(f"✅ Saved with enhanced structure: {files_generated} created, {files_modified} modified")
+        return files_generated, files_modified
+    
+    def _save_with_legacy_structure(self, iteration_structure: IterationStructure, code_files: Dict[str, str]) -> Tuple[int, int]:
+        """Salva con struttura legacy"""
+   
+        """
+        🔄 LEGACY: Salva con la vecchia struttura per compatibilità
+        """
+        files_generated = 0
+        files_modified = 0
+        
+        for file_path, content in code_files.items():
+            full_path = iteration_structure.project_path / file_path
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            if full_path.exists():
+                files_modified += 1
+            else:
+                files_generated += 1
+            
+            try:
+                with open(full_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+            except Exception as e:
+                logger.error(f"Error saving {file_path}: {e}")
+        
         return files_generated, files_modified
     
     def save_test_files(self, 

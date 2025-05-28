@@ -221,7 +221,6 @@ async def _async_process_enhanced_code_generation(self, project_id: str, llm_pro
     # 🔥 ROUTING INTELLIGENTE: Seleziona il generatore basato su agent_mode
     try:
         if agent_mode == "enhanced_generator":
-            # 🎯 USA: Enhanced Code Generator per progetti moderati come NovaPLM
             logger.info("Using Enhanced Code Generator for moderate complexity project")
             
             from app.services.enhanced_code_generator import EnhancedCodeGenerator
@@ -241,12 +240,10 @@ async def _async_process_enhanced_code_generation(self, project_id: str, llm_pro
                 iteration_manager = IterationManager()
                 
                 project_name = requirements.get("project", {}).get("name", project_id)
-                iteration_structure = iteration_manager.create_iteration_structure(
-                    project_path, project_name, 1
-                )
+                iteration_structure = iteration_manager.create_iteration_structure(project_path, project_name, 1)
                 
                 files_generated, files_modified = iteration_manager.save_generated_code(
-                    iteration_structure, result["code_files"]
+                    iteration_structure, result["code_files"], preserve_enhanced_structure=True
                 )
                 
                 result = {

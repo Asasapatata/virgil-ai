@@ -345,7 +345,7 @@ class UpdatedOrchestratorAgent:
                 if self.has_enhanced_generator and len(previous_errors) > 0:
                     logger.info("Using Enhanced Generator for intelligent error fixing")
                     try:
-                        fixed_files = await self.enhanced_code_generator.fix_issues_enhanced(
+                        fixed_files = await self.enhanced_code_generator.fix_issues(
                             code_files=previous_files,
                             issues=previous_errors,
                             provider=provider,

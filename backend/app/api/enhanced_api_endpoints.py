@@ -48,7 +48,7 @@ async def generate_complete_project(request: GenerateRequest, background_tasks: 
         }
         
         # Genera il progetto completo usando EnhancedCodeGenerator
-        result = await enhanced_generator.generate_complete_project(
+        result = await enhanced_generator.generate_complete_project_enhanced(
             project_id=project_id,
             requirements=full_requirements,
             provider=request.provider,
