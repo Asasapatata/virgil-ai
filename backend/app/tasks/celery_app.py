@@ -223,14 +223,17 @@ async def _async_process_enhanced_code_generation(self, project_id: str, llm_pro
         if agent_mode == "enhanced_generator":
             logger.info("Using Enhanced Code Generator for moderate complexity project")
             
-            from app.services.enhanced_code_generator import EnhancedCodeGenerator
-            generator = EnhancedCodeGenerator(llm_service)
+            from app.services.enhanced_orchestrator_wrapper import EnhancedGeneratorWrapper
+            wrapper = EnhancedGeneratorWrapper(llm_service)
             
             # Genera usando il metodo principale del Enhanced Generator
-            result = await generator.generate_complete_project_enhanced(
+            result = await wrapper.generate_application_with_enhanced_flow(
                 requirements=requirements,
                 provider=llm_provider,
-                max_iterations=max_iterations
+                max_iterations=max_iterations,
+                project_path=project_path,
+                progress_callback=progress_callback,
+                generation_mode="enhanced_v2"  # O "orchestrated"
             )
             
             # Adatta il risultato al formato enhanced_v2
