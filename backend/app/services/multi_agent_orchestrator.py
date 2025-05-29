@@ -1,7 +1,5 @@
 # backend/app/services/multi_agent_orchestrator.py
-import json
 import logging
-import re
 import asyncio
 from typing import Dict, Any, List, Optional, Callable, Set
 from pathlib import Path
@@ -9,183 +7,194 @@ from pathlib import Path
 from app.services.llm_service import LLMService
 from app.services.code_generator import CodeGenerator
 from app.services.test_agent import TestAgent
+from app.services.unified_orchestration_manager import UnifiedOrchestrationManager
+
+# Multi-agent specific imports
 from app.services.agent_system import SystemAgent
 from app.services.agent_integration import IntegrationAgent
 from app.services.endpoints_agent import EndpointsAgent
-from app.services.enhanced_test_agent import EnhancedTestAgent
-from app.services.iteration_manager import IterationManager, IterationStructure
-
 
 logger = logging.getLogger(__name__)
 
 class MultiAgentOrchestrator:
     """
-    🔥 ENHANCED VERSION: Orchestratore avanzato che coordina diversi agenti specializzati
-    per generare un'applicazione completa in modo collaborativo.
+    🔥 MULTI-AGENT ORCHESTRATOR - Using Unified Components
     
-    MODIFICATIONS APPLIED:
-    - ✅ Dependency tracking automatico
-    - ✅ Generazione coordinata di file essenziali
-    - ✅ Fix intelligente degli errori di importazione
-    - ✅ Sequenza di generazione ottimizzata
+    Specializes in enterprise-level multi-agent collaborative code generation.
+    Uses unified components for all structure management, file organization, and validation.
+    
+    Focus: Enterprise projects requiring specialized agents working together
     """
     
     def __init__(self, llm_service: LLMService):
         self.llm_service = llm_service
         
-        # Inizializza tutti gli agenti
+        # Core agents
         self.code_generator = CodeGenerator(llm_service)
         self.test_agent = TestAgent(llm_service)
+        
+        # Specialized agents
         self.system_agent = SystemAgent(llm_service)
         self.integration_agent = IntegrationAgent(llm_service)
         self.endpoints_agent = EndpointsAgent(llm_service)
         
-        self.enhanced_test_agent = EnhancedTestAgent(llm_service)
-        self.iteration_manager = IterationManager()
+        # 🎯 UNIFIED COMPONENTS
+        self.unified_manager = UnifiedOrchestrationManager()
         
         self.stop_requested = False
         
-        # 🔥 NEW: Dependency tracking
-        self.required_files = set()
-        self.generated_files = set()
+        # Multi-agent coordination tracking
+        self.agent_coordination = {
+            "active_agents": [],
+            "task_distribution": {},
+            "collaboration_history": []
+        }
         
-        logger.info("MultiAgentOrchestrator initialized with Enhanced V2 support and dependency tracking")
-    
-    async def analyze_requirements(self, 
-                                 requirements: Dict[str, Any], 
-                                 provider: str) -> Dict[str, Any]:
-        """
-        Analizza i requisiti e pianifica il progetto utilizzando gli agenti.
-        """
-        logger.info("Analyzing requirements with system agent")
-        
-        # Usa SystemAgent per analizzare i requisiti
-        return await self.system_agent.analyze_requirements(requirements, provider)
+        logger.info("MultiAgentOrchestrator initialized with unified components and specialized agents")
     
     async def generate_multi_agent_application(self, 
-                                            requirements: Dict[str, Any],
-                                            provider: str,
-                                            max_iterations: int,
-                                            project_path: Path,
-                                            progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
+                                             requirements: Dict[str, Any],
+                                             provider: str,
+                                             max_iterations: int,
+                                             project_path: Path,
+                                             progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
         """
-        🔥 ENHANCED: Generazione con dependency tracking e fix automatico
+        🚀 GENERATE MULTI-AGENT APPLICATION
+        
+        Coordinates multiple specialized agents to generate enterprise-level applications,
+        while delegating all structure, organization, and validation to unified components.
         """
+        
+        # Check for stop request
         stop_file = project_path / "STOP_REQUESTED"
         if stop_file.exists():
             logger.info(f"Stop file found for project {project_path.name}, stopping generation")
             return {"status": "stopped", "reason": "user_requested"}
         
-        logger.info(f"Starting enhanced multi-agent generation with dependency resolution")
+        logger.info(f"🚀 Starting multi-agent collaborative generation with {max_iterations} max iterations")
         
-        # Extract project name
+        # Extract and clean project name
         project_name = requirements.get("project", {}).get("name", project_path.name)
         if not project_name or project_name == project_path.name:
             project_name = f"project_{project_path.name}"
         
-        # Track project state
+        # 🎯 CREATE UNIFIED STRUCTURE
+        structure = self.unified_manager.create_project_structure(project_path, project_name)
+        logger.info(f"🏗️ Unified structure created for: {structure['project_name']}")
+        
+        # Track multi-agent project state
         project_state = {
             "iterations_completed": 0,
             "total_errors_fixed": 0,
             "remaining_issues": [],
             "final_success": False,
-            "generation_mode": "multi_agent_enhanced_v3",
-            "dependency_tracking": True,
-            "files_generated_automatically": 0
+            "generation_strategy": "multi_agent_collaborative_unified",
+            "structure_type": "unified",
+            "agent_coordination": self.agent_coordination,
+            "enterprise_features_implemented": []
         }
         
-        # 🔥 FASE 1: Analisi requirements con sistema V2
+        # 🎯 MULTI-AGENT ANALYSIS AND PLANNING
         if progress_callback:
-            progress_callback(0, 'analyzing_requirements_enhanced')
+            progress_callback(0, 'multi_agent_planning')
         
-        analysis = await self.analyze_requirements(requirements, provider)
+        multi_agent_plan = await self._create_multi_agent_plan(requirements, provider)
+        project_state["multi_agent_plan"] = multi_agent_plan
+        logger.info("🤖 Multi-agent planning completed")
         
-        # Main iteration loop con Enhanced Dependency Resolution
+        # Main iteration loop
         for iteration in range(1, max_iterations + 1):
-            logger.info(f"🚀 Starting enhanced iteration {iteration} with dependency resolution")
+            logger.info(f"🔄 Starting multi-agent iteration {iteration} for {structure['project_name']}")
             
             # Check for stop request
             if stop_file.exists() or self.stop_requested:
-                logger.info("Stop requested, interrupting generation")
+                logger.info("Stop requested, interrupting multi-agent generation")
                 return {
                     "status": "stopped",
                     "reason": "user_requested",
                     "iteration": iteration - 1,
                     "project_id": project_path.name,
-                    "project_state": project_state
+                    "project_state": project_state,
+                    "output_path": str(structure["project_path"])
                 }
             
             try:
-                # Update current iteration
+                # Update current iteration in project.json
                 self._update_current_iteration(project_path, iteration)
                 
-                # 🔥 STEP 1: Create Enhanced V2 iteration structure
-                iteration_structure = self.iteration_manager.create_iteration_structure(
-                    project_path, project_name, iteration
-                )
-                
-                # 🔥 STEP 2: Enhanced code generation with dependency coordination
+                # Progress callback
                 if progress_callback:
-                    progress_callback(iteration, 'generating_coordinated_code')
+                    progress_callback(iteration, f'multi_agent_collaboration_iteration_{iteration}')
                 
-                # Reset tracking for this iteration
-                self.required_files = set()
-                self.generated_files = set()
-                
-                code_files = await self._generate_multi_agent_code_enhanced(
-                    requirements, provider, iteration, project_path, project_name, analysis
-                )
-                
-                # 🔥 STEP 2.5: Ensure all dependencies are satisfied
-                missing_files = await self._ensure_all_dependencies(code_files, requirements, provider)
-                if missing_files:
-                    logger.info(f"📋 Generated {len(missing_files)} missing dependency files")
-                    code_files.update(missing_files)
-                    project_state["files_generated_automatically"] += len(missing_files)
-                
-                # 🔥 STEP 3: Save in Enhanced V2 structure
-                files_generated, files_modified = self.iteration_manager.save_generated_code(
-                    iteration_structure, code_files
-                )
-                
-                logger.info(f"Enhanced Multi-Agent Iteration {iteration}: Generated {files_generated} files, modified {files_modified}")
-                
-                # 🔥 STEP 4: Enhanced V2 validation and testing
+                # 🤖 COLLABORATIVE CODE GENERATION (multi-agent specialty)
                 if progress_callback:
-                    progress_callback(iteration, 'enhanced_validation_with_dependency_check')
+                    progress_callback(iteration, 'multi_agent_collaborative_generation')
                 
-                iteration_result = await self.enhanced_test_agent.process_iteration_complete(
-                    iteration_structure, project_name, iteration, requirements, code_files, provider
+                code_files = await self._generate_code_with_multi_agent_collaboration(
+                    requirements, provider, iteration, structure, multi_agent_plan
+                )
+                
+                # 📁 ORGANIZE AND SAVE (unified system)
+                files_generated, files_modified = self.unified_manager.organize_and_save_files(
+                    structure, code_files, requirements
+                )
+                
+                logger.info(f"✅ Multi-agent iteration {iteration}: Generated {files_generated} files, modified {files_modified}")
+                
+                # 🔍 VALIDATE (unified system)
+                if progress_callback:
+                    progress_callback(iteration, 'multi_agent_validation')
+                
+                validation_result = await self.unified_manager.validate_iteration(
+                    structure, requirements, iteration
                 )
                 
                 # Update project state
                 project_state["iterations_completed"] = iteration
-                project_state["remaining_issues"] = iteration_result.get("errors_for_fixing", [])
+                project_state["remaining_issues"] = validation_result.get("errors_for_fixing", [])
                 
-                # 🔥 ENHANCED: Check success with dependency consideration
-                dependency_issues = self._count_dependency_issues(iteration_result.get("errors_for_fixing", []))
-                project_state["dependency_issues_remaining"] = dependency_issues
-                
-                if iteration_result["success"] and dependency_issues == 0:
-                    logger.info(f"🎉 Enhanced iteration {iteration} completed successfully with all dependencies resolved!")
+                # Check if iteration was successful
+                if validation_result["success"]:
+                    logger.info(f"🎉 Multi-agent iteration {iteration} completed successfully!")
                     project_state["final_success"] = True
                     
                     return {
                         "status": "completed",
                         "iteration": iteration,
                         "project_id": project_path.name,
-                        "project_name": project_name,
-                        "output_path": str(iteration_structure.iteration_path),
+                        "project_name": structure["project_name"],
+                        "output_path": str(structure["project_path"]),
                         "project_state": project_state,
-                        "final_result": iteration_result,
-                        "generation_strategy": "multi_agent_enhanced_v3"
+                        "final_result": validation_result,
+                        "generation_strategy": "multi_agent_collaborative_unified",
+                        "structure_type": "unified",
+                        "multi_agent_plan": multi_agent_plan
                     }
                 
-                # Continue to next iteration
-                logger.info(f"Enhanced iteration {iteration}: {dependency_issues} dependency issues remaining, continuing...")
+                # Continue to next iteration with multi-agent coordination
+                logger.info(f"🔄 Multi-agent iteration {iteration} had issues, coordinating agents for iteration {iteration + 1}")
+                
+                # Update error tracking and agent coordination
+                prev_errors = len(project_state["remaining_issues"])
+                current_errors = len(validation_result.get("errors_for_fixing", []))
+                
+                if current_errors < prev_errors:
+                    project_state["total_errors_fixed"] += (prev_errors - current_errors)
+                
+                # Update agent coordination strategy based on errors
+                await self._update_agent_coordination_strategy(
+                    validation_result.get("errors_for_fixing", []), iteration
+                )
+                
+                # Check progress
+                if iteration > 1 and current_errors >= prev_errors:
+                    logger.warning(f"⚠️ No progress in multi-agent iteration {iteration}, errors: {current_errors}")
+                    # Multi-agent systems should be more resilient, so continue trying
                 
             except Exception as e:
-                logger.error(f"Error in enhanced multi-agent iteration {iteration}: {str(e)}")
+                logger.error(f"❌ Error in multi-agent iteration {iteration}: {str(e)}")
+                
+                # If this is the last iteration, return failure
                 if iteration == max_iterations:
                     return {
                         "status": "failed",
@@ -193,2152 +202,704 @@ class MultiAgentOrchestrator:
                         "error": str(e),
                         "iteration": iteration,
                         "project_id": project_path.name,
-                        "project_state": project_state
+                        "project_state": project_state,
+                        "structure_type": "unified"
                     }
+                
+                # Otherwise, try to continue with different agent coordination
+                logger.info(f"🔄 Attempting to continue with modified agent coordination after error in iteration {iteration}")
+                await self._handle_iteration_failure(e, iteration)
                 continue
         
         # Max iterations reached
+        logger.warning(f"⏱️ Max iterations ({max_iterations}) reached for multi-agent generation")
+        
+        final_status = "completed_with_issues"
+        if project_state["total_errors_fixed"] > 0:
+            final_status = "completed_with_improvements"
+        
         return {
-            "status": "completed_with_issues",
+            "status": final_status,
             "reason": "max_iterations_reached",
             "iterations": max_iterations,
             "project_id": project_path.name,
-            "project_name": project_name,
+            "project_name": structure["project_name"],
             "project_state": project_state,
-            "generation_strategy": "multi_agent_enhanced_v3"
+            "output_path": str(structure["project_path"]),
+            "generation_strategy": "multi_agent_collaborative_unified",
+            "structure_type": "unified",
+            "multi_agent_plan": multi_agent_plan
         }
     
-    # Modifiche da applicare al tuo multi_agent_orchestrator.py esistente
-
-# 1. SOSTITUISCI il metodo _generate_multi_agent_code_v2() con questo:
-
-    async def _generate_multi_agent_code_enhanced(self,
-                                        requirements: Dict[str, Any],
-                                        provider: str,
-                                        iteration: int,
-                                        project_path: Path,
-                                        project_name: str,
-                                        analysis: Dict[str, Any]) -> Dict[str, str]:
+    async def _create_multi_agent_plan(self, requirements: Dict[str, Any], provider: str) -> Dict[str, Any]:
         """
-        🔥 ENHANCED: Genera codice con struttura project-xyz + env_test
+        🤖 CREATE MULTI-AGENT PLAN
+        
+        Analyze requirements and create a plan for multi-agent collaboration
         """
-        logger.info(f"Generating structured multi-agent code for iteration {iteration}")
+        logger.info("🤖 Creating multi-agent collaboration plan")
+        
+        # Analyze requirements complexity
+        complexity_analysis = self._analyze_enterprise_complexity(requirements)
+        
+        # Determine agent assignment
+        agent_assignments = await self._determine_agent_assignments(requirements, provider)
+        
+        # Create collaboration workflow
+        collaboration_workflow = self._create_collaboration_workflow(agent_assignments, complexity_analysis)
+        
+        multi_agent_plan = {
+            "complexity_analysis": complexity_analysis,
+            "agent_assignments": agent_assignments,
+            "collaboration_workflow": collaboration_workflow,
+            "coordination_strategy": self._determine_coordination_strategy(complexity_analysis),
+            "enterprise_features": self._identify_enterprise_features(requirements)
+        }
+        
+        logger.info(f"✅ Multi-agent plan created with {len(agent_assignments)} specialized agents")
+        return multi_agent_plan
+    
+    def _analyze_enterprise_complexity(self, requirements: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze enterprise-level complexity indicators"""
+        
+        features = requirements.get("features", [])
+        tech_stack = requirements.get("tech_stack", {})
+        req_str = str(requirements).lower()
+        
+        complexity_indicators = {
+            "microservices": "microservice" in req_str or "micro-service" in req_str,
+            "authentication": "auth" in req_str or "login" in req_str,
+            "real_time": "real-time" in req_str or "websocket" in req_str,
+            "api_gateway": "gateway" in req_str or "proxy" in req_str,
+            "database_multiple": len([k for k in tech_stack.keys() if "db" in k.lower()]) > 1,
+            "integrations": "integration" in req_str or "external" in req_str,
+            "monitoring": "monitor" in req_str or "log" in req_str,
+            "deployment": "docker" in req_str or "kubernetes" in req_str,
+            "testing": "test" in req_str,
+            "security": "security" in req_str or "encrypt" in req_str
+        }
+        
+        complexity_score = sum(complexity_indicators.values())
+        
+        if complexity_score >= 7:
+            complexity_level = "enterprise"
+        elif complexity_score >= 5:
+            complexity_level = "advanced"
+        elif complexity_score >= 3:
+            complexity_level = "intermediate"
+        else:
+            complexity_level = "standard"
+        
+        return {
+            "level": complexity_level,
+            "score": complexity_score,
+            "indicators": complexity_indicators,
+            "recommended_agents": self._recommend_agents_for_complexity(complexity_level)
+        }
+    
+    def _recommend_agents_for_complexity(self, complexity_level: str) -> List[str]:
+        """Recommend agents based on complexity level"""
+        agent_recommendations = {
+            "standard": ["system_agent", "code_generator"],
+            "intermediate": ["system_agent", "code_generator", "endpoints_agent"],
+            "advanced": ["system_agent", "code_generator", "endpoints_agent", "integration_agent"],
+            "enterprise": ["system_agent", "code_generator", "endpoints_agent", "integration_agent", "test_agent"]
+        }
+        
+        return agent_recommendations.get(complexity_level, ["system_agent", "code_generator"])
+    
+    async def _determine_agent_assignments(self, requirements: Dict[str, Any], provider: str) -> Dict[str, Any]:
+        """Determine which agents handle which parts of the project"""
+        
+        assignments = {
+            "system_agent": {
+                "responsibilities": ["core_architecture", "configuration", "environment_setup"],
+                "priority": "high",
+                "specialization": "System architecture and configuration"
+            },
+            "code_generator": {
+                "responsibilities": ["business_logic", "core_functionality", "base_structure"],
+                "priority": "high", 
+                "specialization": "Core application logic and structure"
+            }
+        }
+        
+        # Determine additional agents based on requirements
+        req_str = str(requirements).lower()
+        
+        if "api" in req_str or "endpoint" in req_str:
+            assignments["endpoints_agent"] = {
+                "responsibilities": ["api_design", "endpoint_implementation", "routing"],
+                "priority": "high",
+                "specialization": "API endpoints and routing"
+            }
+        
+        if "integration" in req_str or "external" in req_str:
+            assignments["integration_agent"] = {
+                "responsibilities": ["external_apis", "third_party_integrations", "data_sync"],
+                "priority": "medium",
+                "specialization": "External integrations and data synchronization"
+            }
+        
+        if "test" in req_str or len(requirements.get("features", [])) > 5:
+            assignments["test_agent"] = {
+                "responsibilities": ["test_generation", "test_automation", "quality_assurance"],
+                "priority": "medium",
+                "specialization": "Testing and quality assurance"
+            }
+        
+        return assignments
+    
+    def _create_collaboration_workflow(self, agent_assignments: Dict[str, Any], complexity_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Create workflow for agent collaboration"""
+        
+        workflow_phases = [
+            {
+                "phase": "foundation",
+                "description": "Establish core architecture and structure",
+                "agents": ["system_agent", "code_generator"],
+                "parallel": False,
+                "dependencies": []
+            }
+        ]
+        
+        # Add API phase if endpoints agent is assigned
+        if "endpoints_agent" in agent_assignments:
+            workflow_phases.append({
+                "phase": "api_development",
+                "description": "Develop API endpoints and routing",
+                "agents": ["endpoints_agent"],
+                "parallel": False,
+                "dependencies": ["foundation"]
+            })
+        
+        # Add integration phase if integration agent is assigned
+        if "integration_agent" in agent_assignments:
+            workflow_phases.append({
+                "phase": "integration",
+                "description": "Implement external integrations and data sync",
+                "agents": ["integration_agent"],
+                "parallel": True,  # Can run parallel with API development
+                "dependencies": ["foundation"]
+            })
+        
+        # Add testing phase if test agent is assigned
+        if "test_agent" in agent_assignments:
+            workflow_phases.append({
+                "phase": "testing",
+                "description": "Generate comprehensive tests and quality assurance",
+                "agents": ["test_agent"],
+                "parallel": False,
+                "dependencies": ["api_development", "integration"] if "integration_agent" in agent_assignments else ["api_development"]
+            })
+        
+        return workflow_phases
+    
+    def _determine_coordination_strategy(self, complexity_analysis: Dict[str, Any]) -> str:
+        """Determine coordination strategy based on complexity"""
+        complexity_level = complexity_analysis["level"]
+        
+        strategy_mapping = {
+            "standard": "sequential",      # Agents work one after another
+            "intermediate": "hybrid",      # Mix of sequential and parallel
+            "advanced": "parallel",       # Agents work in parallel where possible
+            "enterprise": "collaborative" # Full collaboration with cross-agent communication
+        }
+        
+        return strategy_mapping.get(complexity_level, "hybrid")
+    
+    def _identify_enterprise_features(self, requirements: Dict[str, Any]) -> List[str]:
+        """Identify enterprise-level features that require special handling"""
+        enterprise_features = []
+        req_str = str(requirements).lower()
+        
+        feature_indicators = {
+            "microservices_architecture": ["microservice", "micro-service", "distributed"],
+            "api_gateway": ["gateway", "proxy", "load balancer"],
+            "authentication_system": ["auth", "login", "oauth", "jwt", "session"],
+            "real_time_communication": ["websocket", "real-time", "live", "streaming"],
+            "data_analytics": ["analytics", "reporting", "dashboard", "metrics"],
+            "file_management": ["upload", "file", "storage", "s3", "blob"],
+            "notification_system": ["notification", "email", "sms", "push"],
+            "payment_processing": ["payment", "billing", "stripe", "paypal"],
+            "multi_tenant": ["tenant", "multi-tenant", "saas"],
+            "audit_logging": ["audit", "logging", "tracking", "compliance"]
+        }
+        
+        for feature, indicators in feature_indicators.items():
+            if any(indicator in req_str for indicator in indicators):
+                enterprise_features.append(feature)
+        
+        return enterprise_features
+    
+    async def _generate_code_with_multi_agent_collaboration(self,
+                                                          requirements: Dict[str, Any],
+                                                          provider: str,
+                                                          iteration: int,
+                                                          structure: Dict[str, Path],
+                                                          multi_agent_plan: Dict[str, Any]) -> Dict[str, str]:
+        """
+        🤖 GENERATE CODE WITH MULTI-AGENT COLLABORATION
+        
+        This method coordinates multiple agents to generate code collaboratively.
+        """
+        logger.info(f"🤖 Starting multi-agent collaborative code generation for iteration {iteration}")
         
         if iteration == 1:
-            # Prima iterazione: coordinazione completa con struttura corretta
-            return await self._generate_complete_structured_application(
-                requirements, provider, iteration, project_path, project_name, analysis
+            # First iteration: full multi-agent collaboration
+            return await self._execute_multi_agent_workflow(
+                requirements, provider, multi_agent_plan, structure
             )
         else:
-            # Iterazioni successive: carica e migliora con struttura corretta
-            previous_files = self.iteration_manager.load_previous_iteration_files(
-                project_path, project_name, iteration
-            )
+            # Subsequent iterations: collaborative error fixing and improvements
+            existing_files = self.unified_manager.load_previous_files(structure)
+            previous_errors = self.unified_manager.load_previous_errors(structure, iteration - 1)
             
-            # Carica errori precedenti
-            previous_errors = self._load_previous_iteration_errors_v2(project_path, iteration - 1)
-            
-            if previous_errors:
-                # Multi-agent fixing con struttura corretta
-                improved_files = await self._multi_agent_fix_issues(
-                    requirements, provider, previous_errors, previous_files
+            if previous_errors and existing_files:
+                logger.info(f"🤖 Multi-agent collaborative error fixing: {len(previous_errors)} errors")
+                return await self._execute_collaborative_error_fixing(
+                    requirements, provider, previous_errors, existing_files, multi_agent_plan, iteration
                 )
-                # Applica struttura corretta ai file fix
-                return self._apply_structured_organization(improved_files, requirements)
             else:
-                # Multi-agent enhancement con struttura corretta
-                enhanced_files = await self._multi_agent_enhance_quality(
-                    requirements, provider, previous_files, iteration
+                logger.info("🤖 Multi-agent collaborative improvements")
+                return await self._execute_collaborative_improvements(
+                    requirements, provider, existing_files or {}, multi_agent_plan, iteration
                 )
-                # Applica struttura corretta ai file enhanced
-                return self._apply_structured_organization(enhanced_files, requirements)
 
-    # 2. AGGIUNGI questi nuovi metodi:
-
-    async def _generate_complete_structured_application(self,
-                                                    requirements: Dict[str, Any],
-                                                    provider: str,
-                                                    iteration: int,
-                                                    project_path: Path,
-                                                    project_name: str,
-                                                    analysis: Dict[str, Any]) -> Dict[str, str]:
-        """
-        🔥 NEW: Genera applicazione con struttura project-xyz + env_test
-        """
-        logger.info("🏗️ Generating complete structured application")
+    async def _execute_multi_agent_workflow(self,
+                                          requirements: Dict[str, Any],
+                                          provider: str,
+                                          multi_agent_plan: Dict[str, Any],
+                                          structure: Dict[str, Path]) -> Dict[str, str]:
+        """Execute the multi-agent workflow for initial generation"""
         
-        all_files = {}
+        workflow = multi_agent_plan["collaboration_workflow"]
+        agent_assignments = multi_agent_plan["agent_assignments"]
+        all_generated_files = {}
         
-        # Estrai nome progetto pulito
-        clean_project_name = self._clean_project_name(requirements.get("project_name", project_name))
-        
-        # 🔥 STEP 1: Genera codice con metodi esistenti
-        logger.info("📋 Step 1: Generating code with existing multi-agent system...")
-        
-        # Usa i metodi esistenti per generare il codice
-        raw_files = {}
-        
-        # Sistema e configurazione
-        try:
-            system_files = await self.system_agent.generate_system_files(requirements, provider)
-            raw_files.update(system_files)
-        except Exception as e:
-            logger.warning(f"System agent failed: {e}")
-        
-        # Integrazioni
-        try:
-            integration_files = await self.integration_agent.generate_integrations(requirements, provider)
-            raw_files.update(integration_files)
-        except Exception as e:
-            logger.warning(f"Integration agent failed: {e}")
-        
-        # API Endpoints
-        try:
-            endpoint_files = await self.endpoints_agent.generate_endpoints(requirements, provider)
-            raw_files.update(endpoint_files)
-        except Exception as e:
-            logger.warning(f"Endpoints agent failed: {e}")
-        
-        # Core application
-        try:
-            core_files = await self._generate_core_application_code(requirements, provider, raw_files)
-            raw_files.update(core_files)
-        except Exception as e:
-            logger.warning(f"Core application failed: {e}")
-        
-        # 🔥 STEP 2: Organizza i file nella struttura corretta
-        logger.info("🏗️ Step 2: Organizing files into structured format...")
-        structured_files = self._organize_files_into_structure(raw_files, clean_project_name, requirements)
-        all_files.update(structured_files)
-        
-        # 🔥 STEP 3: Genera env_test con copia completa + Docker
-        logger.info("🧪 Step 3: Creating test environment with complete copy...")
-        test_env_files = self._create_test_environment(structured_files, clean_project_name, requirements)
-        all_files.update(test_env_files)
-        
-        # 🔥 STEP 4: Genera file di supporto
-        logger.info("📄 Step 4: Creating support files...")
-        support_files = self._create_support_files(requirements, clean_project_name)
-        all_files.update(support_files)
-        
-        logger.info(f"✅ Structured application generated: {len(all_files)} files")
-        logger.info(f"📁 Structure: project-{clean_project_name}/ + env_test/ + support")
-        
-        return all_files
-
-    def _clean_project_name(self, project_name: str) -> str:
-        """
-        🔥 NEW: Pulisce il nome del progetto per usarlo nei path
-        """
-        import re
-        # Rimuovi caratteri speciali e converti in lowercase
-        clean_name = re.sub(r'[^a-zA-Z0-9\-_]', '', str(project_name).lower())
-        if not clean_name:
-            clean_name = "novaplm"
-        return clean_name
-
-    def _organize_files_into_structure(self, 
-                                    raw_files: Dict[str, str], 
-                                    clean_project_name: str,
-                                    requirements: Dict[str, Any]) -> Dict[str, str]:
-        """
-        🔥 NEW: Organizza i file raw nella struttura project-xyz/backend + project-xyz/frontend
-        """
-        structured_files = {}
-        project_prefix = f"project-{clean_project_name}"
-        
-        # Determina tech stack
-        tech_stack = requirements.get("tech_stack", {})
-        has_backend = tech_stack.get("backend") or "backend" in str(requirements).lower()
-        has_frontend = tech_stack.get("frontend") or "frontend" in str(requirements).lower()
-        
-        # Organizza file per tipo
-        for file_path, content in raw_files.items():
-            # Skip file già strutturati
-            if file_path.startswith(project_prefix):
-                structured_files[file_path] = content
-                continue
+        # Execute workflow phases
+        for phase in workflow:
+            logger.info(f"🎯 Executing multi-agent phase: {phase['phase']}")
             
-            # Determina dove mettere il file
-            if self._is_backend_file(file_path):
-                if has_backend:
-                    new_path = f"{project_prefix}/backend/{file_path}"
+            phase_files = {}
+            
+            # Execute agents in this phase
+            for agent_name in phase["agents"]:
+                if agent_name in agent_assignments:
+                    try:
+                        agent_files = await self._execute_agent_task(
+                            agent_name, requirements, provider, all_generated_files
+                        )
+                        phase_files.update(agent_files)
+                        
+                        # Track collaboration
+                        self.agent_coordination["collaboration_history"].append({
+                            "phase": phase["phase"],
+                            "agent": agent_name,
+                            "files_generated": len(agent_files),
+                            "success": True
+                        })
+                        
+                    except Exception as e:
+                        logger.error(f"❌ Agent {agent_name} failed in phase {phase['phase']}: {e}")
+                        
+                        # Track failure
+                        self.agent_coordination["collaboration_history"].append({
+                            "phase": phase["phase"],
+                            "agent": agent_name,
+                            "files_generated": 0,
+                            "success": False,
+                            "error": str(e)
+                        })
+            
+            # Merge phase files
+            all_generated_files.update(phase_files)
+            logger.info(f"✅ Phase {phase['phase']} completed: {len(phase_files)} files generated")
+        
+        # Apply multi-agent coordination and conflict resolution
+        resolved_files = await self._resolve_multi_agent_conflicts(all_generated_files, requirements)
+        
+        logger.info(f"🤖 Multi-agent workflow completed: {len(resolved_files)} total files")
+        return resolved_files
+
+    async def _execute_agent_task(self,
+                                agent_name: str,
+                                requirements: Dict[str, Any],
+                                provider: str,
+                                existing_files: Dict[str, str]) -> Dict[str, str]:
+        """Execute a specific agent's task"""
+        
+        logger.info(f"🔧 Executing {agent_name} task")
+        
+        # Add existing files context to requirements
+        enhanced_requirements = dict(requirements)
+        enhanced_requirements["_existing_files"] = list(existing_files.keys())
+        enhanced_requirements["_collaboration_context"] = {
+            "agent_role": agent_name,
+            "coordination_mode": "multi_agent",
+            "existing_file_count": len(existing_files)
+        }
+        
+        try:
+            if agent_name == "system_agent":
+                return await self.system_agent.generate_system_files(enhanced_requirements, provider)
+            
+            elif agent_name == "code_generator":
+                return await self.code_generator.generate_code(enhanced_requirements, provider, 1)
+            
+            elif agent_name == "endpoints_agent":
+                return await self.endpoints_agent.generate_endpoints(enhanced_requirements, provider)
+            
+            elif agent_name == "integration_agent":
+                return await self.integration_agent.generate_integrations(enhanced_requirements, provider)
+            
+            elif agent_name == "test_agent":
+                # Test agent needs existing files to generate tests
+                if existing_files:
+                    return await self.test_agent.test_generator.generate_tests(
+                        enhanced_requirements, existing_files, provider
+                    )
                 else:
-                    new_path = f"{project_prefix}/{file_path}"
-            elif self._is_frontend_file(file_path):
-                if has_frontend:
-                    new_path = f"{project_prefix}/frontend/{file_path}"
-                else:
-                    new_path = f"{project_prefix}/{file_path}"
+                    logger.warning("Test agent called without existing files, skipping")
+                    return {}
+            
             else:
-                # File generale va nella root del progetto
-                new_path = f"{project_prefix}/{file_path}"
-            
-            structured_files[new_path] = content
-        
-        # Aggiungi README.md al progetto
-        structured_files[f"{project_prefix}/README.md"] = self._generate_project_readme(requirements, clean_project_name)
-        
-        return structured_files
-
-    def _is_backend_file(self, file_path: str) -> bool:
-        """Determina se un file è backend"""
-        backend_indicators = [
-            '.py', 'requirements.txt', 'app/', 'api/', 'models/', 'schemas/',
-            'database/', 'db/', 'migrations/', 'alembic/', 'fastapi', 'django',
-            'flask', 'main.py', 'wsgi.py', 'asgi.py'
-        ]
-        return any(indicator in file_path.lower() for indicator in backend_indicators)
-
-    def _is_frontend_file(self, file_path: str) -> bool:
-        """Determina se un file è frontend"""
-        frontend_indicators = [
-            '.tsx', '.jsx', '.ts', '.js', '.css', '.scss', '.html',
-            'src/', 'public/', 'components/', 'pages/', 'styles/',
-            'package.json', 'node_modules/', 'build/', 'dist/',
-            'react', 'vue', 'angular', 'next', 'webpack'
-        ]
-        return any(indicator in file_path.lower() for indicator in frontend_indicators)
-
-    def _create_test_environment(self, 
-                            structured_files: Dict[str, str],
-                            clean_project_name: str,
-                            requirements: Dict[str, Any]) -> Dict[str, str]:
-        """
-        🔥 NEW: Crea env_test/ con copia completa + configurazione Docker
-        """
-        test_env_files = {}
-        project_prefix = f"project-{clean_project_name}"
-        
-        # 1. Copia tutti i file del progetto in env_test/
-        for file_path, content in structured_files.items():
-            if file_path.startswith(project_prefix):
-                # Rimuovi il prefisso project- per la copia in env_test
-                relative_path = file_path[len(project_prefix)+1:]  # +1 per il /
-                test_env_files[f"env_test/{relative_path}"] = content
-        
-        # 2. Aggiungi configurazione Docker per test
-        test_env_files["env_test/docker-compose.test.yml"] = self._generate_test_docker_compose(requirements)
-        test_env_files["env_test/Dockerfile.backend"] = self._generate_backend_dockerfile()
-        test_env_files["env_test/Dockerfile.frontend"] = self._generate_frontend_dockerfile()
-        
-        # 3. Aggiungi script di test
-        test_env_files["env_test/run_tests.sh"] = self._generate_test_runner_script()
-        test_env_files["env_test/test_runner.py"] = self._generate_python_test_runner()
-        
-        return test_env_files
-
-    def _generate_project_readme(self, requirements: Dict[str, Any], clean_project_name: str) -> str:
-        """Genera README.md per il progetto"""
-        project_name = requirements.get("project_name", clean_project_name.title())
-        description = requirements.get("description", "Application generated by Multi-Agent System")
-        
-        return f'''# {project_name}
-
-    {description}
-
-    ## 🚀 Quick Start
-
-    ### Using Docker (Recommended)
-
-    1. **Navigate to test environment:**
-    ```bash
-    cd ../env_test
-    ```
-
-    2. **Start all services:**
-    ```bash
-    docker-compose -f docker-compose.test.yml up -d
-    ```
-
-    3. **Run tests:**
-    ```bash
-    ./run_tests.sh
-    ```
-
-    ## 📁 Project Structure
-
-    ```
-    backend/          # Backend application
-    frontend/         # Frontend application
-    README.md         # This file
-    ```
-
-    ## 🧪 Testing
-
-    Tests are run in the `../env_test` environment which contains a complete copy of this project plus Docker configuration.
-
-    ## 💻 Development
-
-    This is the clean development version of the project. 
-    For testing and deployment, use the `../env_test` environment.
-
-    ---
-    *Generated by Enhanced Multi-Agent Orchestrator*
-    '''
-
-    def _generate_test_docker_compose(self, requirements: Dict[str, Any]) -> str:
-        """Genera docker-compose.test.yml per env_test"""
-        tech_stack = requirements.get("tech_stack", {})
-        
-        compose_content = '''version: '3.8'
-
-    services:'''
-        
-        # Backend service
-        if tech_stack.get("backend") or "backend" in str(requirements).lower():
-            compose_content += '''
-    backend:
-        build:
-        context: .
-        dockerfile: Dockerfile.backend
-        ports:
-        - "8000:8000"
-        environment:
-        - PYTHONPATH=/app
-        - DATABASE_URL=postgresql://test:test@db:5432/test_db
-        depends_on:
-        - db
-        volumes:
-        - ./backend:/app
-        networks:
-        - test-network'''
-        
-        # Frontend service
-        if tech_stack.get("frontend") or "frontend" in str(requirements).lower():
-            compose_content += '''
-    frontend:
-        build:
-        context: .
-        dockerfile: Dockerfile.frontend
-        ports:
-        - "3000:3000"
-        environment:
-        - REACT_APP_API_URL=http://backend:8000
-        depends_on:
-        - backend
-        volumes:
-        - ./frontend:/app
-        networks:
-        - test-network'''
-        
-        # Database service
-        if tech_stack.get("database") or "database" in str(requirements).lower():
-            compose_content += '''
-    db:
-        image: postgres:15
-        environment:
-        - POSTGRES_DB=test_db
-        - POSTGRES_USER=test
-        - POSTGRES_PASSWORD=test
-        ports:
-        - "5432:5432"
-        networks:
-        - test-network'''
-        
-        compose_content += '''
-
-    networks:
-    test-network:
-        driver: bridge
-    '''
-        
-        return compose_content
-
-    def _generate_backend_dockerfile(self) -> str:
-        """Genera Dockerfile per backend"""
-        return '''# Backend Test Dockerfile
-    FROM python:3.11-slim
-
-    WORKDIR /app
-
-    # Install system dependencies
-    RUN apt-get update && apt-get install -y \\
-        build-essential \\
-        curl \\
-        && rm -rf /var/lib/apt/lists/*
-
-    # Copy requirements
-    COPY backend/requirements.txt ./requirements.txt
-    RUN pip install --no-cache-dir -r requirements.txt
-
-    # Copy backend code
-    COPY backend/ .
-
-    # Expose port
-    EXPOSE 8000
-
-    # Health check
-    HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \\
-        CMD curl -f http://localhost:8000/health || exit 1
-
-    # Run the application
-    CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-    '''
-
-    def _generate_frontend_dockerfile(self) -> str:
-        """Genera Dockerfile per frontend"""
-        return '''# Frontend Test Dockerfile
-    FROM node:18-alpine
-
-    WORKDIR /app
-
-    # Copy package files
-    COPY frontend/package*.json ./
-
-    # Install dependencies
-    RUN npm ci
-
-    # Copy frontend source
-    COPY frontend/ .
-
-    # Expose port
-    EXPOSE 3000
-
-    # Health check
-    HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \\
-        CMD curl -f http://localhost:3000 || exit 1
-
-    # Start development server
-    CMD ["npm", "start"]
-    '''
-
-    def _generate_test_runner_script(self) -> str:
-        """Genera script bash per run_tests.sh"""
-        return '''#!/bin/bash
-    # Test Runner Script
-
-    set -e
-
-    echo "🧪 Starting test environment..."
-
-    # Start services
-    echo "📦 Starting Docker services..."
-    docker-compose -f docker-compose.test.yml up -d
-
-    # Wait for services to be ready
-    echo "⏳ Waiting for services to be ready..."
-    sleep 30
-
-    # Run backend tests
-    echo "🔧 Running backend tests..."
-    docker-compose -f docker-compose.test.yml exec -T backend python -m pytest tests/ -v || echo "Backend tests failed"
-
-    # Run frontend tests  
-    echo "⚛️ Running frontend tests..."
-    docker-compose -f docker-compose.test.yml exec -T frontend npm test -- --coverage --watchAll=false || echo "Frontend tests failed"
-
-    # Run integration tests
-    echo "🔗 Running integration tests..."
-    python test_runner.py
-
-    # Generate test report
-    echo "📊 Generating test report..."
-    echo "Test completed at $(date)" > test_report.txt
-
-    echo "✅ Tests completed! Check test_report.txt for details"
-
-    # Stop services
-    echo "🛑 Stopping services..."
-    docker-compose -f docker-compose.test.yml down
-    '''
-
-    def _generate_python_test_runner(self) -> str:
-        """Genera test_runner.py per test avanzati"""
-        return '''#!/usr/bin/env python3
-    """
-    Advanced test runner for integration tests
-    """
-    import requests
-    import time
-    import json
-    import sys
-
-    def test_backend_health():
-        """Test backend health endpoint"""
-        try:
-            response = requests.get("http://localhost:8000/health", timeout=10)
-            return response.status_code == 200
-        except:
-            return False
-
-    def test_frontend_accessibility():
-        """Test frontend is accessible"""
-        try:
-            response = requests.get("http://localhost:3000", timeout=10)
-            return response.status_code == 200
-        except:
-            return False
-
-    def run_integration_tests():
-        """Run all integration tests"""
-        tests = [
-            ("Backend Health", test_backend_health),
-            ("Frontend Accessibility", test_frontend_accessibility),
-        ]
-        
-        results = {}
-        
-        print("🔗 Running integration tests...")
-        
-        for test_name, test_func in tests:
-            print(f"  Testing {test_name}...")
-            try:
-                result = test_func()
-                results[test_name] = "PASS" if result else "FAIL"
-                status = "✅" if result else "❌"
-                print(f"  {status} {test_name}: {results[test_name]}")
-            except Exception as e:
-                results[test_name] = f"ERROR: {str(e)}"
-                print(f"  ❌ {test_name}: ERROR - {str(e)}")
-        
-        # Save results
-        with open("integration_test_results.json", "w") as f:
-            json.dump(results, f, indent=2)
-        
-        # Return overall success
-        return all(result == "PASS" for result in results.values())
-
-    if __name__ == "__main__":
-        success = run_integration_tests()
-        sys.exit(0 if success else 1)
-    '''
-
-    def _create_support_files(self, requirements: Dict[str, Any], clean_project_name: str) -> Dict[str, str]:
-        """
-        🔥 NEW: Crea file di supporto (requirements.txt, project.json, etc.)
-        """
-        support_files = {}
-        
-        # requirements.txt per il progetto
-        support_files["requirements.txt"] = self._generate_project_requirements(requirements)
-        
-        # .env template
-        support_files[".env.template"] = self._generate_env_template(requirements)
-        
-        # .gitignore
-        support_files[".gitignore"] = '''# Dependencies
-    node_modules/
-    __pycache__/
-    *.pyc
-    venv/
-    env/
-
-    # IDE
-    .vscode/
-    .idea/
-    *.swp
-
-    # OS
-    .DS_Store
-    Thumbs.db
-
-    # Environment
-    .env
-    .env.local
-
-    # Build outputs
-    build/
-    dist/
-    *.egg-info/
-
-    # Test outputs
-    .coverage
-    .pytest_cache/
-    test_report.txt
-    integration_test_results.json
-
-    # Logs
-    *.log
-    logs/
-    '''
-        
-        return support_files
-
-    def _generate_project_requirements(self, requirements: Dict[str, Any]) -> str:
-        """Genera requirements.txt per il progetto"""
-        tech_stack = requirements.get("tech_stack", {})
-        
-        reqs = []
-        
-        if "fastapi" in str(tech_stack).lower() or "python" in str(tech_stack).lower():
-            reqs.extend([
-                "fastapi>=0.104.0",
-                "uvicorn[standard]>=0.24.0",
-                "pydantic>=2.5.0",
-                "sqlalchemy>=2.0.0",
-                "python-dotenv>=1.0.0"
-            ])
-        
-        if "database" in str(tech_stack).lower() or "postgresql" in str(tech_stack).lower():
-            reqs.append("psycopg2-binary>=2.9.0")
-        
-        if "auth" in str(requirements).lower():
-            reqs.extend([
-                "python-jose[cryptography]>=3.3.0",
-                "passlib[bcrypt]>=1.7.0"
-            ])
-        
-        # Default requirements se nessuno specificato
-        if not reqs:
-            reqs = [
-                "fastapi>=0.104.0",
-                "uvicorn[standard]>=0.24.0",
-                "requests>=2.31.0"
-            ]
-        
-        return "\\n".join(reqs)
-
-    def _generate_env_template(self, requirements: Dict[str, Any]) -> str:
-        """Genera template .env"""
-        return '''# Environment Configuration Template
-    # Copy this to .env and update with your values
-
-    # Database
-    DATABASE_URL=postgresql://user:password@localhost:5432/dbname
-
-    # Security
-    SECRET_KEY=your-secret-key-change-in-production
-
-    # API
-    API_V1_STR=/api/v1
-
-    # Development
-    DEBUG=true
-    LOG_LEVEL=INFO
-
-    # External Services
-    # Add your API keys and external service URLs here
-    '''
-
-    def _apply_structured_organization(self, files: Dict[str, str], requirements: Dict[str, Any]) -> Dict[str, str]:
-        """
-        🔥 NEW: Applica struttura organizzata ai file esistenti
-        """
-        # Estrai nome progetto
-        project_name = self._clean_project_name(requirements.get("project_name", "novaplm"))
-        
-        # Organizza nella struttura corretta
-        structured = self._organize_files_into_structure(files, project_name, requirements)
-        
-        # Aggiungi env_test
-        test_env = self._create_test_environment(structured, project_name, requirements)
-        structured.update(test_env)
-        
-        # Aggiungi supporto
-        support = self._create_support_files(requirements, project_name)
-        structured.update(support)
-        
-        return structured
-
-    # 3. MODIFICA il metodo _module_to_file_path per supportare la nuova struttura:
-
-    def _module_to_file_path(self, module: str) -> Optional[str]:
-        """
-        🔥 ENHANCED: Supporta sia struttura legacy che struttura project-xyz
-        """
-        # Mappature per struttura legacy (backward compatibility)
-        legacy_mappings = {
-            "app.core.config": "app/core/config.py",
-            "app.api.errors": "app/api/errors.py", 
-            "app.api.utils": "app/api/utils.py",
-            "app.db.session": "app/db/session.py",
-            "./apiClient": "src/api/apiClient.ts",
-            "../types": "src/types/index.ts"
-        }
-        
-        # Rileva se stiamo usando struttura project-xyz
-        if hasattr(self, '_current_project_name'):
-            project_prefix = f"project-{self._current_project_name}"
-            
-            # Mappature per struttura project-xyz
-            structured_mappings = {
-                "app.core.config": f"{project_prefix}/backend/app/core/config.py",
-                "app.api.errors": f"{project_prefix}/backend/app/api/errors.py",
-                "app.api.utils": f"{project_prefix}/backend/app/api/utils.py", 
-                "app.db.session": f"{project_prefix}/backend/app/db/session.py",
-                "./apiClient": f"{project_prefix}/frontend/src/api/apiClient.ts",
-                "../types": f"{project_prefix}/frontend/src/types/index.ts"
-            }
-            
-            return structured_mappings.get(module, legacy_mappings.get(module))
-        
-        return legacy_mappings.get(module)
-
-    async def _generate_complete_coordinated_application(self,
-                                                       requirements: Dict[str, Any],
-                                                       provider: str,
-                                                       iteration: int,
-                                                       project_path: Path,
-                                                       project_name: str,
-                                                       analysis: Dict[str, Any]) -> Dict[str, str]:
-        """
-        🔥 NEW: Generazione completa coordinata in fasi sequenziali
-        """
-        logger.info("🏗️ Generating complete coordinated application")
-        
-        all_files = {}
-        
-        # 🔥 PHASE 1: Essential core files (HIGHEST PRIORITY)
-        logger.info("📋 Phase 1: Generating essential core files...")
-        core_files = await self._generate_essential_core_files(requirements, provider)
-        all_files.update(core_files)
-        self._track_files(core_files)
-        
-        # 🔥 PHASE 2: Package structure (__init__.py files)
-        logger.info("🏗️ Phase 2: Generating package structure...")
-        structure_files = self._generate_package_structure(requirements)
-        all_files.update(structure_files)
-        self._track_files(structure_files)
-        
-        # 🔥 PHASE 3: System and integrations
-        logger.info("🔌 Phase 3: Generating system integrations...")
-        try:
-            system_files = await self.system_agent.generate_system_files(requirements, provider)
-            all_files.update(system_files)
-            self._track_files(system_files)
+                logger.warning(f"Unknown agent: {agent_name}")
+                return {}
+                
         except Exception as e:
-            logger.warning(f"System agent failed: {e}, using fallback")
-            
-        try:
-            integration_files = await self.integration_agent.generate_integrations(requirements, provider)
-            all_files.update(integration_files)
-            self._track_files(integration_files)
-        except Exception as e:
-            logger.warning(f"Integration agent failed: {e}, using fallback")
+            logger.error(f"❌ Error executing {agent_name}: {e}")
+            return {}
+
+    async def _execute_collaborative_error_fixing(self,
+                                                requirements: Dict[str, Any],
+                                                provider: str,
+                                                errors: List[Dict[str, Any]],
+                                                existing_files: Dict[str, str],
+                                                multi_agent_plan: Dict[str, Any],
+                                                iteration: int) -> Dict[str, str]:
+        """Execute collaborative error fixing using multiple agents"""
         
-        # 🔥 PHASE 4: Coordinated API endpoints
-        logger.info("🌐 Phase 4: Generating coordinated endpoints...")
-        endpoint_files = await self._generate_coordinated_endpoints(requirements, provider, all_files)
-        all_files.update(endpoint_files)
-        self._track_files(endpoint_files)
+        logger.info(f"🔧 Multi-agent collaborative error fixing: {len(errors)} errors")
         
-        # 🔥 PHASE 5: Main application code
-        logger.info("⚛️ Phase 5: Generating main application...")
-        app_files = await self._generate_coordinated_application(requirements, provider, all_files)
-        all_files.update(app_files)
-        self._track_files(app_files)
-        
-        # 🔥 PHASE 6: Utility and configuration files
-        logger.info("🔧 Phase 6: Generating utility files...")
-        utility_files = await self._generate_utility_files(requirements, provider, all_files)
-        all_files.update(utility_files)
-        self._track_files(utility_files)
-        
-        logger.info(f"✅ Complete coordinated application generated: {len(all_files)} files")
-        return all_files
-
-    async def _generate_essential_core_files(self, requirements: Dict[str, Any], provider: str) -> Dict[str, str]:
-        """
-        🔥 NEW: Genera i file core essenziali che risolvono gli errori di importazione principali
-        """
-        core_files = {}
-        
-        # 1. app/core/config.py - Risolve: Import 'app.core.config' not found (6+ files)
-        core_files["app/core/config.py"] = '''"""
-Core configuration settings for the application.
-"""
-import os
-from typing import Optional
-from pydantic import BaseSettings
-
-class Settings(BaseSettings):
-    """Application settings."""
-    
-    # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://user:password@db:5432/novaplm")
-    
-    # Security
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    ALGORITHM: str = "HS256"
-    
-    # CORS
-    CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:3001"]
-    
-    # API
-    API_V1_STR: str = "/api/v1"
-    PROJECT_NAME: str = "NovaPLM"
-    
-    class Config:
-        env_file = ".env"
-
-settings = Settings()
-'''
-        
-        # 2. app/db/session.py - Risolve: Import 'app.db.session' not found
-        core_files["app/db/session.py"] = '''"""
-Database session management.
-"""
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from app.core.config import settings
-
-engine = create_engine(settings.DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base = declarative_base()
-
-def get_db():
-    """Get database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-'''
-        
-        # 3. app/api/errors.py - Risolve: Import 'app.api.errors' not found
-        core_files["app/api/errors.py"] = '''"""
-API error definitions and handlers.
-"""
-from fastapi import HTTPException, status
-
-class APIError(HTTPException):
-    """Base API error."""
-    pass
-
-class AuthenticationError(APIError):
-    """Authentication error."""
-    def __init__(self, detail: str = "Authentication failed"):
-        super().__init__(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
-
-class ValidationError(APIError):
-    """Validation error."""
-    def __init__(self, detail: str = "Validation failed"):
-        super().__init__(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
-
-class NotFoundError(APIError):
-    """Not found error."""
-    def __init__(self, detail: str = "Resource not found"):
-        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
-'''
-        
-        # 4. app/api/utils.py - Risolve: Import 'app.api.utils' not found
-        core_files["app/api/utils.py"] = '''"""
-API utility functions.
-"""
-from typing import Any, Dict
-from fastapi import HTTPException, status
-
-def create_response(data: Any = None, message: str = "Success") -> Dict[str, Any]:
-    """Create standardized API response."""
-    return {
-        "status": "success",
-        "message": message,
-        "data": data
-    }
-
-def create_error_response(message: str = "Error", code: int = 400) -> HTTPException:
-    """Create standardized error response."""
-    return HTTPException(
-        status_code=code,
-        detail={
-            "status": "error",
-            "message": message
-        }
-    )
-'''
-        
-        # 5. src/api/apiClient.ts - Risolve: Import './apiClient' not found (tutti i file frontend API)
-        core_files["src/api/apiClient.ts"] = '''/**
- * API client for making HTTP requests.
- */
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
-
-class ApiClient {
-  private client: AxiosInstance;
-
-  constructor() {
-    this.client = axios.create({
-      baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1',
-      timeout: 10000,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    this.setupInterceptors();
-  }
-
-  private setupInterceptors(): void {
-    // Request interceptor for auth token
-    this.client.interceptors.request.use((config) => {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        config.headers['Authorization'] = `Bearer ${token}`;
-      }
-      return config;
-    });
-
-    // Response interceptor for error handling
-    this.client.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          localStorage.removeItem('access_token');
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
-      }
-    );
-  }
-
-  public async get<T>(url: string): Promise<AxiosResponse<T>> {
-    return this.client.get<T>(url);
-  }
-
-  public async post<T>(url: string, data?: any): Promise<AxiosResponse<T>> {
-    return this.client.post<T>(url, data);
-  }
-
-  public async put<T>(url: string, data?: any): Promise<AxiosResponse<T>> {
-    return this.client.put<T>(url, data);
-  }
-
-  public async delete<T>(url: string): Promise<AxiosResponse<T>> {
-    return this.client.delete<T>(url);
-  }
-}
-
-export const apiClient = new ApiClient();
-export default apiClient;
-'''
-        
-        # 6. src/types/index.ts - Risolve: Import '../types' not found (tutti i file frontend API)
-        core_files["src/types/index.ts"] = '''/**
- * TypeScript type definitions.
- */
-
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  created_at: string;
-}
-
-export interface Project {
-  id: number;
-  name: string;
-  code: string;
-  status: 'active' | 'suspended' | 'completed';
-  owner_id: number;
-  description?: string;
-  created_at: string;
-}
-
-export interface Document {
-  id: number;
-  project_id: number;
-  file_path: string;
-  version: number;
-  uploaded_by: number;
-  created_at: string;
-}
-
-export interface Review {
-  id: number;
-  document_id: number;
-  reviewer_id: number;
-  status: 'pending' | 'approved' | 'rejected';
-  comments?: string;
-  reviewed_at?: string;
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  access_token: string;
-  token_type: string;
-  user: User;
-}
-
-export interface ApiResponse<T> {
-  status: string;
-  message: string;
-  data: T;
-}
-'''
-        
-        # 7. utils/logger.js - Risolve: Import './logger' not found
-        core_files["utils/logger.js"] = '''/**
- * Logger utility for Node.js backend.
- */
-const winston = require('winston');
-
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'novaplm' },
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-  ],
-});
-
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.simple()
-  }));
-}
-
-module.exports = logger;
-'''
-        
-        # 8. utils/auth.js - Risolve: Import '../utils/auth' not found
-        core_files["utils/auth.js"] = '''/**
- * Authentication utilities for Node.js backend.
- */
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const SALT_ROUNDS = 10;
-
-const auth = {
-  generateToken: (payload) => {
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
-  },
-
-  verifyToken: (token) => {
-    try {
-      return jwt.verify(token, JWT_SECRET);
-    } catch (error) {
-      throw new Error('Invalid token');
-    }
-  },
-
-  hashPassword: async (password) => {
-    return await bcrypt.hash(password, SALT_ROUNDS);
-  },
-
-  comparePassword: async (password, hash) => {
-    return await bcrypt.compare(password, hash);
-  }
-};
-
-module.exports = auth;
-'''
-        
-        return core_files
-
-    def _generate_package_structure(self, requirements: Dict[str, Any]) -> Dict[str, str]:
-        """
-        🔥 NEW: Genera tutti i file __init__.py necessari per risolvere errori package
-        """
-        init_files = {}
-        
-        # Struttura backend Python - Risolve tutti gli errori "not found" per package
-        python_packages = [
-            "app/__init__.py",
-            "app/api/__init__.py",
-            "app/api/v1/__init__.py", 
-            "app/api/v1/endpoints/__init__.py",
-            "app/api/routes/__init__.py",
-            "app/core/__init__.py",
-            "app/db/__init__.py",
-            "app/models/__init__.py",
-            "app/schemas/__init__.py",
-            "app/services/__init__.py",
-            "app/middleware/__init__.py"
-        ]
-        
-        for package_path in python_packages:
-            init_files[package_path] = '''"""
-Package initialization file.
-"""
-'''
-        
-        return init_files
-
-    async def _generate_coordinated_endpoints(self,
-                                            requirements: Dict[str, Any],
-                                            provider: str,
-                                            existing_files: Dict[str, str]) -> Dict[str, str]:
-        """
-        🔥 ENHANCED: Genera endpoints coordinati che si riferiscono ai file esistenti
-        """
-        logger.info("🌐 Generating coordinated API endpoints...")
-        
-        # Genera endpoints base
-        try:
-            endpoint_files = await self.endpoints_agent.generate_endpoints(requirements, provider)
-        except Exception as e:
-            logger.warning(f"Endpoints agent failed: {e}, using fallback")
-            endpoint_files = {}
-        
-        # Assicura coordinamento con file esistenti
-        coordinated_files = {}
-        
-        # API main router coordinato - Risolve: Import 'app.api.v1.api' not found
-        coordinated_files["app/api/v1/api.py"] = '''"""
-API v1 main router - Coordinated version.
-"""
-from fastapi import APIRouter
-
-# Import endpoint routers
-try:
-    from app.api.v1.endpoints import users, projects, documents, reviews, login
-except ImportError:
-    # Create fallback routers if endpoints not available
-    from fastapi import APIRouter
-    users = type('Router', (), {'router': APIRouter()})()
-    projects = type('Router', (), {'router': APIRouter()})()
-    documents = type('Router', (), {'router': APIRouter()})()
-    reviews = type('Router', (), {'router': APIRouter()})()
-    login = type('Router', (), {'router': APIRouter()})()
-
-api_router = APIRouter()
-
-# Include all routers
-api_router.include_router(login.router, prefix="/auth", tags=["authentication"])
-api_router.include_router(users.router, prefix="/users", tags=["users"])  
-api_router.include_router(projects.router, prefix="/projects", tags=["projects"])
-api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
-api_router.include_router(reviews.router, prefix="/reviews", tags=["reviews"])
-'''
-        
-        # Routes module - Risolve: Import 'app.api.routes' not found
-        coordinated_files["app/api/routes.py"] = '''"""
-API routes module - Main router collection.
-"""
-from app.api.v1.api import api_router
-
-__all__ = ["api_router"]
-'''
-        
-        # Endpoints package init - Risolve: Import 'app.api.v1.endpoints' not found
-        coordinated_files["app/api/v1/endpoints/__init__.py"] = '''"""
-API v1 endpoints package.
-"""
-# Import all endpoint modules
-try:
-    from . import users, projects, documents, reviews, login
-except ImportError:
-    # Handle missing endpoint modules gracefully
-    pass
-
-__all__ = ["users", "projects", "documents", "reviews", "login"]
-'''
-        
-        # Merge con i file generati dall'agente
-        coordinated_files.update(endpoint_files)
-        
-        return coordinated_files
-
-    async def _generate_coordinated_application(self,
-                                              requirements: Dict[str, Any],
-                                              provider: str,
-                                              existing_files: Dict[str, str]) -> Dict[str, str]:
-        """
-        🔥 ENHANCED: Genera l'applicazione principale coordinata
-        """
-        logger.info("⚛️ Generating coordinated main application...")
-        
-        app_files = {}
-        
-        # Main FastAPI application coordinato
-        app_files["app/main.py"] = '''"""
-FastAPI main application - Coordinated version.
-"""
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-import time
-import logging
-
-# Import coordinated modules
-from app.core.config import settings
-from app.api.v1.api import api_router
-from app.api.errors import APIError
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Create FastAPI app
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    description="Product Lifecycle Management Platform",
-    version="1.0.0",
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
-)
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Add timing middleware
-@app.middleware("http")
-async def add_process_time_header(request: Request, call_next):
-    start_time = time.time()
-    response = await call_next(request)
-    process_time = time.time() - start_time
-    response.headers["X-Process-Time"] = str(process_time)
-    return response
-
-# Global exception handler
-@app.exception_handler(APIError)
-async def api_error_handler(request: Request, exc: APIError):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "status": "error",
-            "message": exc.detail,
-            "path": str(request.url)
-        }
-    )
-
-# Include API router
-app.include_router(api_router, prefix=settings.API_V1_STR)
-
-# Health check endpoint
-@app.get("/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "service": settings.PROJECT_NAME,
-        "version": "1.0.0"
-    }
-
-# Root endpoint
-@app.get("/")
-async def root():
-    return {
-        "message": f"Welcome to {settings.PROJECT_NAME} API",
-        "docs": "/docs",
-        "health": "/health"
-    }
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-'''
-        
-        # Dependencies coordinato
-        app_files["app/api/deps.py"] = '''"""
-API dependencies - Coordinated version.
-"""
-from typing import Generator, Optional
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
-import jwt
-
-# Import coordinated modules
-from app.core.config import settings
-from app.db.session import get_db
-
-security = HTTPBearer()
-
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-):
-    """Get current authenticated user."""
-    try:
-        token = credentials.credentials
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id: int = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authentication credentials"
-            )
-    except jwt.PyJWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials"
-        )
-    
-    # For now, return a mock user - to be replaced with actual user lookup
-    try:
-        from app.models.user import User
-        user = db.query(User).filter(User.id == user_id).first()
-    except ImportError:
-        # Fallback if User model not available yet
-        user = type('User', (), {'id': user_id, 'email': 'user@example.com', 'is_active': True})()
-    
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
-        )
-    return user
-
-def get_current_active_user(current_user = Depends(get_current_user)):
-    """Get current active user."""
-    return current_user
-'''
-        
-        # Frontend App.tsx coordinato
-        app_files["src/App.tsx"] = '''/**
- * Main App component with coordinated routing.
- */
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { ProtectedRoute } from './components/common/ProtectedRoute';
-
-// Import pages
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
-import ProjectsPage from './pages/ProjectsPage';
-import DocumentsPage from './pages/DocumentsPage';
-
-// Import global styles
-import './styles/global.css';
-
-const App: React.FC = () => {
-  return (
-    <AuthProvider>
-      <Router>
-        <div className="App">
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            
-            {/* Protected routes */}
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/projects" 
-              element={
-                <ProtectedRoute>
-                  <ProjectsPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/documents" 
-              element={
-                <ProtectedRoute>
-                  <DocumentsPage />
-                </ProtectedRoute>
-              } 
-            />
-            
-            {/* Redirect */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
-  );
-};
-
-export default App;
-'''
-        
-        # AuthContext coordinato
-        app_files["src/contexts/AuthContext.tsx"] = '''/**
- * Authentication context with coordinated API client.
- */
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, LoginRequest, LoginResponse } from '../types';
-import { authApi } from '../api/authApi';
-
-interface AuthContextType {
-  user: User | null;
-  login: (credentials: LoginRequest) => Promise<void>;
-  logout: () => void;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      // Validate token and get user info
-      authApi.getCurrentUser()
-        .then(response => {
-          setUser(response.data.data);
-        })
-        .catch(() => {
-          localStorage.removeItem('access_token');
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const login = async (credentials: LoginRequest): Promise<void> => {
-    try {
-      const response = await authApi.login(credentials);
-      const { access_token, user: userData } = response.data.data;
-      
-      localStorage.setItem('access_token', access_token);
-      setUser(userData);
-    } catch (error) {
-      throw new Error('Login failed');
-    }
-  };
-
-  const logout = (): void => {
-    localStorage.removeItem('access_token');
-    setUser(null);
-  };
-
-  const value: AuthContextType = {
-    user,
-    login,
-    logout,
-    isAuthenticated: !!user,
-    isLoading
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-'''
-        
-        # ProtectedRoute component
-        app_files["src/components/common/ProtectedRoute.tsx"] = '''/**
- * Protected route component.
- */
-import React, { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-
-interface ProtectedRouteProps {
-  children: ReactNode;
-}
-
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-};
-'''
-        
-        # Integra il core application esistente
-        try:
-            core_files = await self._generate_core_application_code(requirements, provider, existing_files)
-            app_files.update(core_files)
-        except Exception as e:
-            logger.warning(f"Core application generation failed: {e}")
-        
-        return app_files
-
-    async def _generate_utility_files(self,
-                                    requirements: Dict[str, Any],
-                                    provider: str,
-                                    existing_files: Dict[str, str]) -> Dict[str, str]:
-        """
-        🔥 ENHANCED: Genera file di utility coordinati e configurazione Docker
-        """
-        utility_files = {}
-        
-        # Package.json coordinato
-        utility_files["package.json"] = '''{
-  "name": "novaplm",
-  "version": "1.0.0",
-  "description": "Product Lifecycle Management Platform",
-  "main": "src/index.js",
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "dev": "concurrently \\"npm run start\\" \\"npm run backend:dev\\"",
-    "backend:dev": "cd backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
-  },
-  "dependencies": {
-    "@types/node": "^16.18.0",
-    "@types/react": "^18.0.0",
-    "@types/react-dom": "^18.0.0",
-    "axios": "^1.6.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.8.0",
-    "react-scripts": "5.0.1",
-    "typescript": "^4.9.0"
-  },
-  "devDependencies": {
-    "concurrently": "^7.6.0",
-    "@types/jest": "^27.5.0"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  }
-}
-'''
-        
-        # Requirements.txt coordinato
-        utility_files["requirements.txt"] = '''# FastAPI and dependencies
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
-
-# Database
-sqlalchemy==2.0.23
-psycopg2-binary==2.9.9
-alembic==1.12.1
-
-# Authentication
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-bcrypt==4.1.2
-
-# Validation
-pydantic==2.5.0
-pydantic-settings==2.1.0
-email-validator==2.1.0
-
-# HTTP client
-httpx==0.25.2
-
-# Development
-python-dotenv==1.0.0
-pytest==7.4.3
-pytest-asyncio==0.21.1
-
-# Production
-gunicorn==21.2.0
-'''
-        
-        # Docker Compose coordinato
-        utility_files["docker-compose.yml"] = '''version: '3.8'
-
-services:
-  frontend:
-    build:
-      context: .
-      dockerfile: frontend.Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      - REACT_APP_API_URL=http://localhost:8000/api/v1
-    volumes:
-      - ./src:/app/src
-      - ./public:/app/public
-    depends_on:
-      - backend
-
-  backend:
-    build:
-      context: .
-      dockerfile: backend.Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://novaplm:password@db:5432/novaplm
-      - SECRET_KEY=your-secret-key-change-in-production
-    volumes:
-      - ./app:/app/app
-      - ./uploads:/app/uploads
-    depends_on:
-      - db
-
-  db:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=novaplm
-      - POSTGRES_USER=novaplm
-      - POSTGRES_PASSWORD=password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
-
-volumes:
-  postgres_data:
-'''
-        
-        return utility_files
-
-    async def _ensure_all_dependencies(self, 
-                                     code_files: Dict[str, str], 
-                                     requirements: Dict[str, Any], 
-                                     provider: str) -> Dict[str, str]:
-        """
-        🔥 NEW: Assicura che tutte le dipendenze siano soddisfatte analizzando gli import
-        """
-        missing_files = {}
-        
-        # Analizza tutti i file per trovare import mancanti
-        all_imports = set()
-        for file_path, content in code_files.items():
-            imports = self._extract_imports_from_content(content, file_path)
-            all_imports.update(imports)
-        
-        # Controlla quali import non hanno file corrispondenti
-        for import_module in all_imports:
-            expected_file = self._module_to_file_path(import_module)
-            if expected_file and expected_file not in code_files and expected_file not in missing_files:
-                content = await self._generate_module_content(import_module, requirements, provider)
-                missing_files[expected_file] = content
-                logger.info(f"📋 Generated missing dependency: {expected_file}")
-        
-        return missing_files
-
-    def _extract_imports_from_content(self, content: str, file_path: str) -> List[str]:
-        """
-        🔥 NEW: Estrae tutte le importazioni da un file per dependency tracking
-        """
-        imports = []
-        lines = content.split('\n')
-        
-        for line in lines:
-            line = line.strip()
-            
-            # Python imports
-            if file_path.endswith('.py'):
-                if line.startswith('from ') and ' import ' in line:
-                    match = re.match(r'from\s+([^\s]+)\s+import', line)
-                    if match and not match.group(1).startswith('.'):  # Skip relative imports
-                        imports.append(match.group(1))
-                elif line.startswith('import '):
-                    match = re.match(r'import\s+([^\s,]+)', line)
-                    if match:
-                        imports.append(match.group(1))
-            
-            # TypeScript/JavaScript imports
-            elif file_path.endswith(('.ts', '.tsx', '.js', '.jsx')):
-                if 'import' in line and 'from' in line:
-                    match = re.search(r"from\s+['\"]([^'\"]+)['\"]", line)
-                    if match:
-                        imports.append(match.group(1))
-        
-        return imports
-
-    def _module_to_file_path(self, module: str) -> Optional[str]:
-        """
-        🔥 NEW: Converte nome modulo in percorso file per dependency resolution
-        """
-        module_mappings = {
-            # Python modules che causano errori
-            "app.core.config": "app/core/config.py",
-            "app.core": "app/core/__init__.py",
-            "app.api.errors": "app/api/errors.py",
-            "app.api.utils": "app/api/utils.py",
-            "app.api.routes": "app/api/routes.py",
-            "app.api": "app/api/__init__.py",
-            "app.api.v1.api": "app/api/v1/api.py",
-            "app.api.v1.endpoints": "app/api/v1/endpoints/__init__.py",
-            "app.db.session": "app/db/session.py",
-            
-            # TypeScript/JavaScript modules che causano errori
-            "./apiClient": "src/api/apiClient.ts",
-            "../types": "src/types/index.ts",
-            "./logger": "utils/logger.js",
-            "../utils/auth": "utils/auth.js"
-        }
-        
-        return module_mappings.get(module)
-
-    async def _generate_module_content(self, module: str, requirements: Dict[str, Any], provider: str) -> str:
-        """
-        🔥 NEW: Genera il contenuto per un modulo specifico mancante
-        """
-        # Per moduli già definiti nei file essenziali, non rigenerare
-        predefined_modules = {
-            "app.core.config",
-            "app.api.errors", 
-            "app.api.utils",
-            "app.db.session",
-            "src/api/apiClient.ts",
-            "src/types/index.ts",
-            "utils/logger.js",
-            "utils/auth.js"
-        }
-        
-        if module in predefined_modules:
-            return f'# Module {module} should be handled by essential files generation'
-        
-        # Genera contenuto generico per moduli non predefiniti
-        if module.endswith('.py') or '.' in module:
-            return f'"""\n{module} module.\n"""\n# Generated module content\npass\n'
-        else:
-            return f'// {module} module\n// Generated module content\nexport default {{}};'
-
-    async def _enhanced_dependency_fix(self,
-                                     requirements: Dict[str, Any],
-                                     provider: str,
-                                     errors: List[Dict[str, Any]],
-                                     existing_files: Dict[str, str],
-                                     iteration: int) -> Dict[str, str]:
-        """
-        🔥 ENHANCED: Fix intelligente delle dipendenze con prioritizzazione
-        """
-        logger.info(f"🔧 Enhanced dependency fixing for iteration {iteration}")
-        
-        # Analizza errori per priorità
-        import_errors = [e for e in errors if self._is_import_error(e)]
-        other_errors = [e for e in errors if e not in import_errors]
-        
-        logger.info(f"Found {len(import_errors)} import errors and {len(other_errors)} other errors")
+        # Categorize errors by agent specialty
+        error_assignments = self._assign_errors_to_agents(errors, multi_agent_plan["agent_assignments"])
         
         fixed_files = dict(existing_files)
         
-        # 🔥 STEP 1: Fix import errors con generazione mirata
-        if import_errors:
-            missing_files = await self._generate_missing_import_files(import_errors, requirements, provider)
-            fixed_files.update(missing_files)
-            logger.info(f"Generated {len(missing_files)} missing import files")
-        
-        # 🔥 STEP 2: Fix altri errori con agenti specializzati
-        if other_errors:
-            try:
-                agent_fixes = await self._multi_agent_fix_issues(requirements, provider, other_errors, fixed_files)
-                fixed_files.update(agent_fixes)
-                logger.info(f"Applied {len(agent_fixes)} agent fixes")
-            except Exception as e:
-                logger.warning(f"Multi-agent fix failed: {e}")
-        
-        return fixed_files
-
-    def _is_import_error(self, error: Dict[str, Any]) -> bool:
-        """
-        🔥 NEW: Determina se un errore è relativo alle importazioni
-        """
-        message = error.get("message", "").lower()
-        error_type = error.get("type", "").lower()
-        
-        return (
-            error_type == "import_error" or
-            "import" in message and "not found" in message or
-            "module" in message and "not found" in message
-        )
-
-    async def _generate_missing_import_files(self,
-                                           import_errors: List[Dict[str, Any]],
-                                           requirements: Dict[str, Any],
-                                           provider: str) -> Dict[str, str]:
-        """
-        🔥 NEW: Genera specificatamente i file mancanti dalle importazioni
-        """
-        missing_files = {}
-        
-        # Analizza i pattern degli errori di importazione
-        missing_modules = set()
-        for error in import_errors:
-            message = error.get("message", "")
-            if "Import" in message and "not found" in message:
-                # Estrai il modulo mancante
-                import_match = re.search(r"Import '([^']+)' not found", message)
-                if import_match:
-                    missing_modules.add(import_match.group(1))
-        
-        logger.info(f"Identified missing modules: {missing_modules}")
-        
-        # Mappa i moduli ai file che devono essere creati
-        for module in missing_modules:
-            file_path = self._module_to_file_path(module)
-            if file_path and file_path not in missing_files:
-                content = await self._generate_module_content(module, requirements, provider)
-                missing_files[file_path] = content
-        
-        return missing_files
-
-    def _count_dependency_issues(self, errors: List[Dict[str, Any]]) -> int:
-        """
-        🔥 NEW: Conta i problemi di dipendenza rimanenti
-        """
-        dependency_issues = 0
-        for error in errors:
-            if self._is_import_error(error):
-                dependency_issues += 1
-        return dependency_issues
-
-    def _track_files(self, files: Dict[str, str]):
-        """
-        🔥 NEW: Traccia i file generati per dependency tracking
-        """
-        for file_path in files.keys():
-            self.generated_files.add(file_path)
-
-    async def _multi_agent_enhance_quality(self,
-                                         requirements: Dict[str, Any],
-                                         provider: str,
-                                         existing_files: Dict[str, str],
-                                         iteration: int) -> Dict[str, str]:
-        """
-        🔥 ENHANCED: Migliora la qualità del codice senza errori
-        """
-        logger.info(f"🎨 Enhancing code quality for iteration {iteration}")
-        
-        # Se non ci sono errori, usa il generatore esistente per miglioramenti
-        enhanced_files = await self.code_generator.generate_iterative_improvement(
-            requirements, provider, iteration, [], existing_files
-        )
-        
-        return enhanced_files
-
-    async def _multi_agent_fix_issues(self,
-                                    requirements: Dict[str, Any],
-                                    provider: str,
-                                    errors: List[Dict[str, Any]],
-                                    existing_files: Dict[str, str]) -> Dict[str, str]:
-        """
-        🔥 ENHANCED: Multi-agent coordinated issue fixing con fallback
-        """
-        logger.info("🔧 Multi-agent coordinated issue fixing")
-        
-        # Dividi errori per tipo/agente con priorità
-        system_errors = [e for e in errors if e.get("category") in ["config", "setup", "environment"]]
-        integration_errors = [e for e in errors if e.get("category") in ["external", "api", "service"]]
-        endpoint_errors = [e for e in errors if e.get("category") in ["route", "controller", "endpoint"]]
-        general_errors = [e for e in errors if e not in system_errors + integration_errors + endpoint_errors]
-        
-        fixed_files = dict(existing_files)
-        
-        # Fix in sequenza con fallback per evitare conflitti
-        if system_errors:
-            try:
-                if hasattr(self.system_agent, 'fix_system_issues'):
-                    system_fixes = await self.system_agent.fix_system_issues(system_errors, fixed_files, provider)
-                    fixed_files.update(system_fixes)
-                    logger.info(f"Applied {len(system_fixes)} system fixes")
-            except Exception as e:
-                logger.warning(f"System agent fix failed: {e}")
-        
-        if integration_errors:
-            try:
-                if hasattr(self.integration_agent, 'fix_integration_issues'):
-                    integration_fixes = await self.integration_agent.fix_integration_issues(integration_errors, fixed_files, provider)
-                    fixed_files.update(integration_fixes)
-                    logger.info(f"Applied {len(integration_fixes)} integration fixes")
-            except Exception as e:
-                logger.warning(f"Integration agent fix failed: {e}")
-        
-        if endpoint_errors:
-            try:
-                if hasattr(self.endpoints_agent, 'fix_endpoint_issues'):
-                    endpoint_fixes = await self.endpoints_agent.fix_endpoint_issues(endpoint_errors, fixed_files, provider)
-                    fixed_files.update(endpoint_fixes)
-                    logger.info(f"Applied {len(endpoint_fixes)} endpoint fixes")
-            except Exception as e:
-                logger.warning(f"Endpoint agent fix failed: {e}")
-        
-        if general_errors:
-            try:
-                general_fixes = await self.code_generator.generate_iterative_improvement(
-                    requirements, provider, 2, general_errors, fixed_files
-                )
-                fixed_files.update(general_fixes)
-                logger.info(f"Applied {len(general_fixes)} general fixes")
-            except Exception as e:
-                logger.warning(f"General fix failed: {e}")
-        
-        return fixed_files
-
-    # ========== EXISTING METHODS (Preserved) ==========
-    
-    async def _generate_core_application_code(self, 
-                                           requirements: Dict[str, Any], 
-                                           provider: str,
-                                           existing_files: Dict[str, str]) -> Dict[str, str]:
-        """
-        Genera il codice principale dell'applicazione, escludendo infrastruttura, 
-        integrazioni e endpoint già generati.
-        """
-        logger.info("Generating core application code")
-        
-        # Crea un prompt che faccia riferimento ai file esistenti
-        existing_files_summary = "\n".join([f"- {path}" for path in existing_files.keys()])
-        
-        system_prompt = f"""You are an expert software developer tasked with creating the core application code.
-        Some infrastructure, integration, and API endpoint files have already been generated.
-        Focus on implementing the business logic, models, services, and UI components that are needed
-        to complete the application according to the requirements.
-        
-        Existing files:
-        {existing_files_summary}
-        
-        Do not recreate these files. Generate only new files needed to complete the application.
-        """
-        
-        # Determina se il progetto è frontend, backend o fullstack
-        project_type = requirements.get("project", {}).get("type", "fullstack")
-        
-        if project_type == "frontend":
-            # Genera solo frontend
-            frontend_files = await self.code_generator.generate_react_app(requirements, provider)
-            return frontend_files
-        elif project_type == "backend":
-            # Genera solo backend
-            backend_files = await self.code_generator.generate_backend_api(requirements, provider)
-            return backend_files
-        else:
-            # Genera fullstack
-            frontend_files = await self.code_generator.generate_react_app(requirements, provider)
-            backend_files = await self.code_generator.generate_backend_api(requirements, provider)
-            
-            combined_files = dict(frontend_files)
-            combined_files.update(backend_files)
-            return combined_files
-    
-    async def _regenerate_code_with_fixes(self,
-                                       requirements: Dict[str, Any],
-                                       provider: str,
-                                       failures: List[Dict[str, Any]],
-                                       iteration: int,
-                                       existing_files: Dict[str, str]) -> Dict[str, str]:
-        """
-        Rigenera il codice con correzioni basate sui test falliti.
-        """
-        logger.info(f"Regenerating code with fixes for iteration {iteration}")
-        
-        return await self.code_generator.generate_iterative_improvement(
-            requirements, provider, iteration, failures, existing_files
-        )
-    
-    def _load_existing_files(self, path: Path) -> Dict[str, str]:
-        """
-        Carica tutti i file esistenti da una directory.
-        """
-        files = {}
-        
-        if not path.exists():
-            return files
-        
-        # Leggi ricorsivamente tutti i file
-        for file_path in path.rglob("*"):
-            if file_path.is_file() and file_path.name != "test_results.json":
-                relative_path = str(file_path.relative_to(path))
+        # Each agent handles their assigned errors
+        for agent_name, agent_errors in error_assignments.items():
+            if agent_errors:  # Only if agent has errors to fix
                 try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        files[relative_path] = f.read()
+                    logger.info(f"🔧 {agent_name} fixing {len(agent_errors)} errors")
+                    
+                    agent_fixes = await self._get_agent_error_fixes(
+                        agent_name, requirements, provider, agent_errors, fixed_files
+                    )
+                    
+                    fixed_files.update(agent_fixes)
+                    
+                    # Track collaboration
+                    self.agent_coordination["collaboration_history"].append({
+                        "iteration": iteration,
+                        "agent": agent_name,
+                        "task": "error_fixing",
+                        "errors_handled": len(agent_errors),
+                        "files_modified": len(agent_fixes),
+                        "success": True
+                    })
+                    
                 except Exception as e:
-                    logger.error(f"Error reading {file_path}: {str(e)}")
+                    logger.error(f"❌ {agent_name} error fixing failed: {e}")
+                    
+                    # Track failure
+                    self.agent_coordination["collaboration_history"].append({
+                        "iteration": iteration,
+                        "agent": agent_name,
+                        "task": "error_fixing",
+                        "errors_handled": len(agent_errors),
+                        "files_modified": 0,
+                        "success": False,
+                        "error": str(e)
+                    })
         
-        return files
-    
-    def _save_code_files(self, output_path: Path, code_files: Dict[str, str]):
-        """
-        Salva i file di codice nella directory di output.
-        """
-        for file_path, content in code_files.items():
-            # Verifica se è richiesta l'interruzione
-            if self.stop_requested:
-                logger.info("Stop requested during file saving")
-                raise Exception("Generation stopped by user request")
-                
-            full_path = output_path / file_path
-            full_path.parent.mkdir(parents=True, exist_ok=True)
+        return fixed_files
+
+    def _assign_errors_to_agents(self, errors: List[Dict[str, Any]], agent_assignments: Dict[str, Any]) -> Dict[str, List]:
+        """Assign errors to appropriate agents based on their specialization"""
+        
+        error_assignments = {agent: [] for agent in agent_assignments.keys()}
+        
+        for error in errors:
+            error_category = error.get("category", "unknown")
+            error_type = error.get("type", "unknown")
             
-            # Applica correzioni ai file Python
-            if file_path.endswith('.py'):
-                content = self._fix_imports(content, file_path)
-                
-            try:
-                with open(full_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
-            except Exception as e:
-                logger.error(f"Error writing {file_path}: {str(e)}")
-    
+            # Assign based on error category and agent specialization
+            if error_category in ["api", "endpoint", "routing"] and "endpoints_agent" in error_assignments:
+                error_assignments["endpoints_agent"].append(error)
+            elif error_category in ["integration", "external"] and "integration_agent" in error_assignments:
+                error_assignments["integration_agent"].append(error)
+            elif error_category in ["config", "system"] and "system_agent" in error_assignments:
+                error_assignments["system_agent"].append(error)
+            elif error_type in ["test_failure", "testing"] and "test_agent" in error_assignments:
+                error_assignments["test_agent"].append(error)
+            else:
+                # Default to code_generator for general errors
+                error_assignments["code_generator"].append(error)
+        
+        # Log assignment distribution
+        for agent, assigned_errors in error_assignments.items():
+            if assigned_errors:
+                logger.info(f"📋 {agent}: {len(assigned_errors)} errors assigned")
+        
+        return error_assignments
+
+    async def _get_agent_error_fixes(self,
+                                   agent_name: str,
+                                   requirements: Dict[str, Any],
+                                   provider: str,
+                                   errors: List[Dict[str, Any]],
+                                   existing_files: Dict[str, str]) -> Dict[str, str]:
+        """Get error fixes from a specific agent"""
+        
+        # Check if agent has a specialized fix method
+        if hasattr(getattr(self, agent_name, None), 'fix_issues'):
+            agent = getattr(self, agent_name)
+            return await agent.fix_issues(errors, existing_files, provider)
+        
+        # Fallback to general fixing approach
+        enhanced_requirements = dict(requirements)
+        enhanced_requirements["_error_context"] = {
+            "errors": errors,
+            "agent_specialization": agent_name,
+            "error_count": len(errors)
+        }
+        
+        if agent_name == "code_generator":
+            return await self.code_generator.generate_iterative_improvement(
+                enhanced_requirements, provider, 2, errors, existing_files
+            )
+        else:
+            # For specialized agents, use their standard generation with error context
+            return await self._execute_agent_task(agent_name, enhanced_requirements, provider, existing_files)
+
+    async def _execute_collaborative_improvements(self,
+                                                requirements: Dict[str, Any],
+                                                provider: str,
+                                                existing_files: Dict[str, str],
+                                                multi_agent_plan: Dict[str, Any],
+                                                iteration: int) -> Dict[str, str]:
+        """Execute collaborative improvements using multiple agents"""
+        
+        logger.info(f"🎨 Multi-agent collaborative improvements for iteration {iteration}")
+        
+        # Determine improvement focus for each agent
+        improvement_assignments = self._assign_improvements_to_agents(
+            requirements, multi_agent_plan, iteration
+        )
+        
+        improved_files = dict(existing_files)
+        
+        # Each agent applies their specialized improvements
+        for agent_name, improvement_focus in improvement_assignments.items():
+            if improvement_focus:  # Only if agent has improvements to make
+                try:
+                    logger.info(f"🎨 {agent_name} applying improvements: {', '.join(improvement_focus)}")
+                    
+                    agent_improvements = await self._get_agent_improvements(
+                        agent_name, requirements, provider, improvement_focus, improved_files
+                    )
+                    
+                    improved_files.update(agent_improvements)
+                    
+                    # Track collaboration
+                    self.agent_coordination["collaboration_history"].append({
+                        "iteration": iteration,
+                        "agent": agent_name,
+                        "task": "improvements",
+                        "focus_areas": improvement_focus,
+                        "files_modified": len(agent_improvements),
+                        "success": True
+                    })
+                    
+                except Exception as e:
+                    logger.error(f"❌ {agent_name} improvements failed: {e}")
+        
+        return improved_files
+
+    def _assign_improvements_to_agents(self,
+                                     requirements: Dict[str, Any],
+                                     multi_agent_plan: Dict[str, Any],
+                                     iteration: int) -> Dict[str, List[str]]:
+        """Assign improvement tasks to appropriate agents"""
+        
+        # Base improvement focus by iteration
+        iteration_improvements = {
+            2: ["error_handling", "code_organization"],
+            3: ["performance", "security"],
+            4: ["documentation", "testing"],
+            5: ["maintainability", "scalability"]
+        }
+        
+        base_improvements = iteration_improvements.get(iteration, ["code_quality"])
+        agent_assignments = multi_agent_plan["agent_assignments"]
+        
+        improvement_assignments = {}
+        
+        # Assign improvements based on agent specialization
+        for agent_name, assignment in agent_assignments.items():
+            agent_improvements = []
+            
+            if agent_name == "system_agent":
+                agent_improvements = [imp for imp in base_improvements if imp in ["security", "performance", "scalability"]]
+            elif agent_name == "endpoints_agent":
+                agent_improvements = [imp for imp in base_improvements if imp in ["documentation", "error_handling"]]
+            elif agent_name == "integration_agent":
+                agent_improvements = [imp for imp in base_improvements if imp in ["error_handling", "security"]]
+            elif agent_name == "test_agent":
+                agent_improvements = [imp for imp in base_improvements if imp in ["testing", "code_quality"]]
+            elif agent_name == "code_generator":
+                agent_improvements = [imp for imp in base_improvements if imp in ["maintainability", "code_organization"]]
+            
+            improvement_assignments[agent_name] = agent_improvements
+        
+        return improvement_assignments
+
+    async def _get_agent_improvements(self,
+                                    agent_name: str,
+                                    requirements: Dict[str, Any],
+                                    provider: str,
+                                    improvement_focus: List[str],
+                                    existing_files: Dict[str, str]) -> Dict[str, str]:
+        """Get improvements from a specific agent"""
+        
+        enhanced_requirements = dict(requirements)
+        enhanced_requirements["_improvement_context"] = {
+            "focus_areas": improvement_focus,
+            "agent_specialization": agent_name,
+            "improvement_mode": "collaborative"
+        }
+        
+        # Use agent's specialized improvement method if available
+        if hasattr(getattr(self, agent_name, None), 'enhance_code_quality'):
+            agent = getattr(self, agent_name)
+            return await agent.enhance_code_quality(existing_files, improvement_focus, provider)
+        
+        # Fallback to agent's standard generation with improvement context
+        return await self._execute_agent_task(agent_name, enhanced_requirements, provider, existing_files)
+
+    async def _resolve_multi_agent_conflicts(self,
+                                           all_files: Dict[str, str],
+                                           requirements: Dict[str, Any]) -> Dict[str, str]:
+        """Resolve conflicts between files generated by different agents"""
+        
+        logger.info("🔄 Resolving multi-agent conflicts")
+        
+        # Simple conflict resolution: later agents override earlier ones for same files
+        # In a more sophisticated system, this would involve intelligent merging
+        
+        resolved_files = {}
+        file_sources = {}  # Track which agent generated which file
+        
+        for file_path, content in all_files.items():
+            # Check for potential conflicts (same file from different agents)
+            if file_path in resolved_files:
+                logger.warning(f"⚠️ File conflict detected: {file_path}")
+                # For now, keep the latest version
+                file_sources[file_path] = "conflict_resolved"
+            else:
+                file_sources[file_path] = "single_source"
+            
+            resolved_files[file_path] = content
+        
+        logger.info(f"✅ Conflict resolution complete: {len(resolved_files)} files resolved")
+        return resolved_files
+
+    async def _update_agent_coordination_strategy(self, errors: List[Dict[str, Any]], iteration: int):
+        """Update agent coordination strategy based on current errors"""
+        
+        # Analyze error patterns to improve coordination
+        error_categories = {}
+        for error in errors:
+            category = error.get("category", "unknown")
+            error_categories[category] = error_categories.get(category, 0) + 1
+        
+        # Update active agents based on error patterns
+        if error_categories.get("api", 0) > 3 and "endpoints_agent" not in self.agent_coordination["active_agents"]:
+            self.agent_coordination["active_agents"].append("endpoints_agent")
+            logger.info("📈 Activated endpoints_agent due to API errors")
+        
+        if error_categories.get("integration", 0) > 2 and "integration_agent" not in self.agent_coordination["active_agents"]:
+            self.agent_coordination["active_agents"].append("integration_agent")
+            logger.info("📈 Activated integration_agent due to integration errors")
+        
+        # Update task distribution
+        self.agent_coordination["task_distribution"][f"iteration_{iteration}"] = error_categories
+
+    async def _handle_iteration_failure(self, error: Exception, iteration: int):
+        """Handle iteration failure and adjust agent coordination"""
+        
+        logger.warning(f"🔄 Handling multi-agent iteration {iteration} failure: {error}")
+        
+        # Simplify agent coordination for next iteration
+        if len(self.agent_coordination["active_agents"]) > 2:
+            # Reduce to core agents
+            self.agent_coordination["active_agents"] = ["system_agent", "code_generator"]
+            logger.info("🔄 Simplified agent coordination to core agents")
+        
+        # Record failure for analysis
+        self.agent_coordination["collaboration_history"].append({
+            "iteration": iteration,
+            "event": "iteration_failure",
+            "error": str(error),
+            "recovery_action": "simplified_coordination"
+        })
+
     def _update_current_iteration(self, project_path: Path, iteration: int):
-        """
-        Aggiorna l'iterazione corrente nel file project.json.
-        """
+        """Update current iteration in project.json"""
         try:
             project_json_path = project_path / "project.json"
             if project_json_path.exists():
+                import json
                 with open(project_json_path, 'r') as f:
                     project_data = json.load(f)
                 
                 project_data["current_iteration"] = iteration
+                project_data["structure_type"] = "unified"
+                project_data["generation_mode"] = "multi_agent_collaborative"
+                project_data["active_agents"] = self.agent_coordination["active_agents"]
                 
                 with open(project_json_path, 'w') as f:
                     json.dump(project_data, f, indent=2)
         except Exception as e:
             logger.error(f"Error updating project.json: {str(e)}")
     
-    def _prepare_final_project(self, project_path: Path, final_iteration: int):
-        """
-        Prepara il progetto finale utilizzando ProjectMerger.
-        """
-        try:
-            # Importa ProjectMerger
-            from app.services.project_merger import ProjectMerger
-            
-            # Crea un'istanza di ProjectMerger
-            merger = ProjectMerger(base_output_path="output")
-            
-            # Crea un elenco di tutte le iterazioni
-            iterations = []
-            for i in range(1, final_iteration + 1):
-                iter_path = project_path / f"iter-{i}"
-                if iter_path.exists():
-                    iterations.append(i)
-            
-            # Esegui il merge
-            if iterations:
-                merger.merge_all_iterations(project_path.name, iterations)
-                logger.info(f"Final project created with iterations {iterations}")
-        except Exception as e:
-            logger.error(f"Error preparing final project: {str(e)}")
-    
-    def _fix_imports(self, content: str, file_path: str) -> str:
-        """
-        🔥 ENHANCED: Corregge le importazioni nei file Python con pattern aggiornati
-        """
-        if not content.strip():
-            return content
-            
-        # Correggi pattern di importazione specifici
-        lines = content.split('\n')
-        fixed_lines = []
-        
-        for line in lines:
-            # Regex per le importazioni da correggere
-            patterns = [
-                (r'^\s*from\s+(api|core|db|models|schemas|services)\.', r'from app.\1.'),
-                (r'^\s*import\s+(api|core|db|models|schemas|services)\.', r'import app.\1.')
-            ]
-            
-            fixed_line = line
-            for pattern, replacement in patterns:
-                fixed_line = re.sub(pattern, replacement, fixed_line)
-                
-            fixed_lines.append(fixed_line)
-            
-        return '\n'.join(fixed_lines)
-    
-    def _load_previous_iteration_errors_v2(self, project_path: Path, previous_iteration: int) -> List[Dict[str, Any]]:
-        """
-        🔥 ENHANCED: Carica errori da Enhanced V2 structure con parsing migliorato
-        """
-        errors = []
-        prev_iter_path = project_path / f"iter-{previous_iteration}"
-        
-        if not prev_iter_path.exists():
-            return errors
-        
-        # Load from Enhanced V2 iteration summary
-        summary_path = prev_iter_path / "iteration_summary.json"
-        if summary_path.exists():
-            try:
-                with open(summary_path, 'r') as f:
-                    summary = json.load(f)
-                
-                # Extract from validation report
-                if "validation_report" in summary:
-                    validation = summary["validation_report"]
-                    for issue in validation.get("issues", []):
-                        if issue.get("severity") == "error":
-                            errors.append({
-                                "type": issue.get("issue_type", "validation"),
-                                "category": self._categorize_error(issue),
-                                "file": issue.get("file_path"),
-                                "line": issue.get("line_number"),
-                                "message": issue.get("message", ""),
-                                "suggestion": issue.get("suggestion", ""),
-                                "priority": "high" if self._is_import_error(issue) else "medium"
-                            })
-                
-                # Extract from compilation report
-                if "compilation_report" in summary:
-                    compilation = summary["compilation_report"]
-                    for error in compilation.get("errors", []):
-                        errors.append({
-                            "type": "compilation",
-                            "category": error.get("error_type", "unknown"),
-                            "file": error.get("file_path"),
-                            "line": error.get("line_number"),
-                            "message": error.get("message", ""),
-                            "priority": "high"
-                        })
-            
-            except Exception as e:
-                logger.warning(f"Could not load Enhanced V2 iteration summary: {e}")
-        
-        return errors
-    
-    def _categorize_error(self, error: Dict[str, Any]) -> str:
-        """
-        🔥 NEW: Categorizza gli errori per routing agli agenti appropriati
-        """
-        message = error.get("message", "").lower()
-        issue_type = error.get("issue_type", "").lower()
-        
-        if "config" in message or "settings" in message:
-            return "config"
-        elif "import" in message and "not found" in message:
-            return "import"
-        elif "api" in message or "endpoint" in message:
-            return "endpoint"
-        elif "database" in message or "db" in message:
-            return "database"
-        elif issue_type == "import_error":
-            return "import"
-        else:
-            return "general"
-    
     def request_stop(self):
-        """
-        Imposta il flag per richiedere l'interruzione del processo.
-        """
-        logger.info("Stop requested for Enhanced MultiAgentOrchestrator")
+        """Request stop for the multi-agent orchestrator"""
+        logger.info("Stop requested for MultiAgentOrchestrator")
         self.stop_requested = True
+        
+        # Notify all agents to stop if they support it
+        for agent_name in ["system_agent", "integration_agent", "endpoints_agent"]:
+            agent = getattr(self, agent_name, None)
+            if agent and hasattr(agent, 'request_stop'):
+                agent.request_stop()
+
+    # 🎯 MULTI-AGENT SPECIFIC METHODS
+    
+    def get_agent_coordination_status(self) -> Dict[str, Any]:
+        """Get current agent coordination status"""
+        return {
+            "coordination_strategy": self.agent_coordination,
+            "collaboration_history": self.agent_coordination["collaboration_history"][-10:],  # Last 10 events
+            "active_agents": self.agent_coordination["active_agents"],
+            "total_collaborations": len(self.agent_coordination["collaboration_history"])
+        }
+    
+    async def analyze_requirements(self, requirements: Dict[str, Any], provider: str) -> Dict[str, Any]:
+        """
+        Analyze requirements using system agent
+        (Kept for backward compatibility)
+        """
+        logger.info("Analyzing requirements with system agent")
+        return await self.system_agent.analyze_requirements(requirements, provider)

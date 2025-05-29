@@ -11,6 +11,7 @@ from datetime import datetime  # Aggiungere questo import
 
 from app.core.config import settings
 
+logger = logging.getLogger(__name__)
 
 # Create Celery app
 celery = Celery('tasks',
@@ -187,7 +188,7 @@ async def _async_process_enhanced_code_generation(self, project_id: str, llm_pro
     import logging
 
     project_path = Path(f"output/{project_id}")
-    logger = logging.getLogger(__name__)
+
     logger.info(f"Starting enhanced generation with agent_mode: {agent_mode} for {project_id}")
 
     with open(project_path / "project.json", 'r') as f:
@@ -453,7 +454,6 @@ def process_agent_generation(self, project_id, llm_provider="openai", max_iterat
         import asyncio
         from pathlib import Path
         
-        logger = logging.getLogger(__name__)
         logger.info(f"Starting agent-based code generation for project {project_id}")
         
         # Percorso del progetto
@@ -719,3 +719,217 @@ def update_project_status(project_path: Path, status: str, iteration: int = None
     
     with open(project_path / "project.json", 'w') as f:
         json.dump(project_data, f, indent=2)
+
+
+# 🎯 UNIFIED TASK - ONLY Enhanced V2
+@celery.task(bind=True)
+def process_unified_generation(self, 
+                              project_id: str, 
+                              llm_provider: str = "anthropic", 
+                              max_iterations: int = 5,
+                              generation_strategy: str = "updated_orchestrator"):
+    """
+    🔥 UNIFIED TASK: Only Enhanced V2 with unified structure
+    
+    Strategies:
+    - updated_orchestrator: Best for complex projects (DEFAULT)
+    - enhanced_generator: Best for simple/moderate projects  
+    - multi_agent: Best for enterprise projects
+    """
+    return asyncio.run(_async_process_unified_generation(
+        self, project_id, llm_provider, max_iterations, generation_strategy
+    ))
+
+
+async def _async_process_unified_generation(self, 
+                                          project_id: str, 
+                                          llm_provider: str,
+                                          max_iterations: int,
+                                          generation_strategy: str):
+    """🔥 UNIFIED ASYNC HANDLER - Enhanced V2 Only"""
+    project_path = Path(f"output/{project_id}")
+
+    logger.info(f"🚀 Starting Enhanced V2 unified generation: {generation_strategy} for {project_id}")
+
+    # Load project data
+    try:
+        with open(project_path / "project.json", 'r') as f:
+            project_data = json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to load project data: {e}")
+        return {"status": "error", "error": f"Project data error: {str(e)}"}
+
+    requirements = project_data.get('requirements', {})
+    
+    # Update project status to Enhanced V2
+    project_data.update({
+        "status": "processing",
+        "task_id": self.request.id,
+        "generation_mode": "enhanced_v2_unified",
+        "generation_strategy": generation_strategy,
+        "started_at": datetime.now().isoformat(),
+        "structure_type": "unified"  # 🎯 Always unified structure
+    })
+
+    with open(project_path / "project.json", 'w') as f:
+        json.dump(project_data, f, indent=2)
+
+    # Progress callback
+    def progress_callback(iteration: int, status: str):
+        self.update_state(
+            state='PROGRESS',
+            meta={
+                'current': iteration,
+                'total': max_iterations,
+                'status': status,
+                'generation_strategy': generation_strategy,
+                'structure': 'unified'
+            }
+        )
+
+    # Initialize LLM service
+    from app.services.llm_service import LLMService
+    llm_service = LLMService()
+
+    try:
+        # 🎯 UNIFIED ROUTING - Enhanced V2 Only
+
+        if generation_strategy == "updated_orchestrator":
+            logger.info("🔧 Using UpdatedOrchestratorAgent with unified structure")
+            
+            from app.services.updated_orchestrator import UpdatedOrchestratorAgent
+            orchestrator = UpdatedOrchestratorAgent(llm_service)
+            
+            result = await orchestrator.generate_application_with_enhanced_flow(
+                requirements=requirements,
+                provider=llm_provider,
+                max_iterations=max_iterations,
+                project_path=project_path,
+                progress_callback=progress_callback
+            )
+            
+        elif generation_strategy == "enhanced_generator":
+            logger.info("⚡ Using EnhancedGeneratorWrapper with unified structure")
+            
+            from app.services.enhanced_orchestrator_wrapper import EnhancedGeneratorWrapper
+            wrapper = EnhancedGeneratorWrapper(llm_service)
+            
+            result = await wrapper.generate_application_with_enhanced_flow(
+                requirements=requirements,
+                provider=llm_provider,
+                max_iterations=max_iterations,
+                project_path=project_path,
+                progress_callback=progress_callback
+            )
+            
+        elif generation_strategy == "multi_agent":
+            logger.info("🤖 Using MultiAgentOrchestrator with unified structure")
+            
+            from app.services.multi_agent_orchestrator import MultiAgentOrchestrator
+            orchestrator = MultiAgentOrchestrator(llm_service)
+            
+            result = await orchestrator.generate_multi_agent_application(
+                requirements=requirements,
+                provider=llm_provider,
+                max_iterations=max_iterations,
+                project_path=project_path,
+                progress_callback=progress_callback
+            )
+            
+        else:
+            # 🚨 Default fallback to updated_orchestrator
+            logger.warning(f"Unknown strategy: {generation_strategy}, using updated_orchestrator")
+            
+            from app.services.updated_orchestrator import UpdatedOrchestratorAgent
+            orchestrator = UpdatedOrchestratorAgent(llm_service)
+            
+            result = await orchestrator.generate_application_with_enhanced_flow(
+                requirements=requirements,
+                provider=llm_provider,
+                max_iterations=max_iterations,
+                project_path=project_path,
+                progress_callback=progress_callback
+            )
+
+        # 🎯 FINALIZE PROJECT - Enhanced V2 Unified
+        logger.info("🏁 Finalizing Enhanced V2 unified project")
+        
+        # Calculate performance metrics
+        performance_metrics = _calculate_performance_metrics(project_data, result)
+        
+        # Update final project data
+        project_data.update({
+            'status': result["status"],
+            'final_result': result,
+            'completed_at': datetime.now().isoformat(),
+            'performance_metrics': performance_metrics,
+            'structure_verified': True,
+        })
+
+        # Save final project data
+        with open(project_path / "project.json", 'w') as f:
+            json.dump(project_data, f, indent=2)
+
+        logger.info(f"✅ Enhanced V2 unified generation completed for {project_id}: {result['status']}")
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ Enhanced V2 generation error for {project_id}: {str(e)}")
+        import traceback
+        error_details = traceback.format_exc()
+        logger.error(f"Error details: {error_details}")
+        
+        # Update project status to failed
+        try:
+            with open(project_path / "project.json", 'r') as f:
+                project_data = json.load(f)
+            
+            project_data.update({
+                'status': 'failed',
+                'error': str(e),
+                'error_details': error_details,
+                'failed_at': datetime.now().isoformat(),
+                'generation_strategy': generation_strategy
+            })
+            
+            with open(project_path / "project.json", 'w') as f:
+                json.dump(project_data, f, indent=2)
+        except:
+            pass
+        
+        return {
+            "status": "error",
+            "error": str(e),
+            "project_id": project_id,
+            "generation_strategy": generation_strategy
+        }
+        
+def _calculate_performance_metrics(project_data: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
+        """🔥 Calculate performance metrics for Enhanced V2"""
+        metrics = {}
+
+        
+        
+        try:
+            if 'started_at' in project_data:
+                started = datetime.fromisoformat(project_data['started_at'])
+                completed = datetime.now()
+                duration = (completed - started).total_seconds()
+                
+                metrics.update({
+                    'generation_duration_seconds': duration,
+                    'generation_duration_minutes': round(duration / 60, 2),
+                    'performance_rating': (
+                        'fast' if duration < 300 else
+                        'normal' if duration < 900 else
+                        'slow'
+                    ),
+                    'iterations_completed': result.get('iteration', 0),
+                    'success_rate': 1.0 if result.get('status') == 'completed' else 0.0,
+                    'structure_type': 'unified'
+                })
+        except Exception as e:
+            logger.warning(f"Error calculating metrics: {e}")
+            metrics = {'error': str(e)}
+        
+        return metrics
